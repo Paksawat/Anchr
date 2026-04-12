@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import axios from 'axios';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_API_URL}/api`;
 
 export default function AuthCallback() {
   const hasProcessed = useRef(false);
@@ -25,7 +25,11 @@ export default function AuthCallback() {
 
     (async () => {
       try {
-        const res = await axios.post(`${API}/auth/session`, { session_id: sessionId }, { withCredentials: true });
+        const res = await axios.post(
+          `${API}/auth/session`,
+          { session_id: sessionId },
+          { withCredentials: true },
+        );
         setUser(res.data);
         navigate('/dashboard', { replace: true, state: { user: res.data } });
       } catch {
@@ -35,10 +39,18 @@ export default function AuthCallback() {
   }, [navigate, setUser]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9F8F6' }}>
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: '#F9F8F6' }}
+    >
       <div className="text-center">
-        <div className="w-12 h-12 rounded-full mx-auto mb-4 animate-pulse" style={{ background: '#A4C3B2' }} />
-        <p style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}>{t('signing_in')}</p>
+        <div
+          className="w-12 h-12 rounded-full mx-auto mb-4 animate-pulse"
+          style={{ background: '#A4C3B2' }}
+        />
+        <p style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}>
+          {t('signing_in')}
+        </p>
       </div>
     </div>
   );
