@@ -38,7 +38,9 @@ export default function MotivationWall() {
     try {
       const res = await axios.get(`${API}/motivations`, { withCredentials: true });
       setMotivations(res.data);
-    } catch {} finally {
+    } catch (error) {
+      console.error('Failed to load motivations:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -51,14 +53,18 @@ export default function MotivationWall() {
       setMessage('');
       setCategory('general');
       setDialogOpen(false);
-    } catch {}
+    } catch (error) {
+      console.error('Failed to save motivation:', error);
+    }
   };
 
   const handleDelete = async (motId) => {
     try {
       await axios.delete(`${API}/motivations/${motId}`, { withCredentials: true });
       setMotivations(motivations.filter(m => m.motivation_id !== motId));
-    } catch {}
+    } catch (error) {
+      console.error('Failed to delete motivation:', error);
+    }
   };
 
   const filtered = filter === 'all' ? motivations : motivations.filter(m => m.category === filter);

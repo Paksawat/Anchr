@@ -35,14 +35,18 @@ export default function Settings() {
     ]).then(([remRes, relRes]) => {
       setReminders(remRes.data);
       setRelapses(relRes.data);
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Failed to load settings data:', error);
+    });
   }, []);
 
   const saveReminders = async () => {
     setSaving(true);
     try {
       await axios.put(`${API}/reminders`, reminders, { withCredentials: true });
-    } catch {} finally {
+    } catch (error) {
+      console.error('Failed to save reminders:', error);
+    } finally {
       setSaving(false);
     }
   };
@@ -82,7 +86,9 @@ export default function Settings() {
       setRelapseTrigger('');
       setRelapseEmotion('');
       setRelapseNotes('');
-    } catch {}
+    } catch (error) {
+      console.error('Failed to log relapse:', error);
+    }
   };
 
   return (
@@ -138,7 +144,7 @@ export default function Settings() {
                 <label className="text-sm mb-2 block" style={{ color: '#7A8B85' }}>Check-in Times</label>
                 <div className="space-y-2">
                   {reminders.times.map((time, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={`time-${i}-${time}`} className="flex items-center gap-2">
                       <Input
                         data-testid={`reminder-time-${i}`}
                         type="time"
@@ -268,8 +274,8 @@ export default function Settings() {
 
           {relapses.length > 0 ? (
             <div className="space-y-3">
-              {relapses.slice(0, 5).map((r, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
+              {relapses.slice(0, 5).map((r) => (
+                <div key={r.relapse_id} className="p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>

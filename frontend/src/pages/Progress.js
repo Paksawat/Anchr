@@ -27,8 +27,8 @@ export default function Progress() {
         setStats(statsRes.data);
         setTriggerStats(triggersRes.data);
         setUrges(urgesRes.data);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // Silently handle — progress page will show empty state
       } finally {
         setLoading(false);
       }
@@ -155,7 +155,7 @@ export default function Progress() {
               {triggerStats?.triggers?.slice(0, 5).map((t, i) => {
                 const maxCount = triggerStats.triggers[0]?.count || 1;
                 return (
-                  <div key={i} className="flex items-center gap-3">
+                  <div key={t.name} className="flex items-center gap-3">
                     <span className="text-sm w-24 truncate" style={{ color: '#7A8B85' }}>{t.name}</span>
                     <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: '#F0EFEB' }}>
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(t.count / maxCount) * 100}%`, background: '#6B9080' }} />
@@ -191,7 +191,7 @@ export default function Progress() {
                   ) : null} />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                     {triggerStats.hours.map((entry, i) => (
-                      <Cell key={i} fill={entry.hour === triggerStats.peak_hour ? '#E5989B' : '#A4C3B2'} />
+                      <Cell key={`hour-${entry.hour}`} fill={entry.hour === triggerStats.peak_hour ? '#E5989B' : '#A4C3B2'} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -207,8 +207,8 @@ export default function Progress() {
           <h3 className="font-heading text-lg font-medium mb-4" style={{ color: '#2A3A35' }}>Recent Urges</h3>
           {urges.length > 0 ? (
             <div className="space-y-3">
-              {urges.slice(0, 10).map((u, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
+              {urges.slice(0, 10).map((u) => (
+                <div key={u.urge_id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{
                       background: u.outcome === 'resisted' ? '#6B908033' : u.outcome === 'relapsed' ? '#E5989B33' : '#E2D4C844'

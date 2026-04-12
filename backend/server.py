@@ -11,6 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+from stats_helpers import calculate_streak, calculate_period_data, calculate_best_streak
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -262,53 +263,14 @@ async def get_stats(user: dict = Depends(get_current_user)):
     relapses = await db.relapses.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     urges = await db.urges.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(1000)
 
-    # Calculate streak
-    if relapses:
-        last_relapse_str = relapses[0]["created_at"]
-        last_relapse = datetime.fromisoformat(last_relapse_str) if isinstance(last_relapse_str, str) else last_relapse_str
-        if last_relapse.tzinfo is None:
-            last_relapse = last_relapse.replace(tzinfo=timezone.utc)
-        streak_days = (now - last_relapse).days
-    else:
-        user_created = user.get("created_at", now.isoformat())
-        created = datetime.fromisoformat(user_created) if isinstance(user_created, str) else user_created
-        if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
-        streak_days = (now - created).days
-
+    user_created = user.get("created_at", now.isoformat())
+    streak_days = calculate_streak(relapses, user_created, now)
     urges_resisted = len([u for u in urges if u.get("outcome") == "resisted"])
     total_urges = len(urges)
     total_relapses = len(relapses)
-
-    # Weekly data (last 7 days)
-    week_ago = now - timedelta(days=7)
-    weekly_urges = []
-    for i in range(7):
-        day = now - timedelta(days=6-i)
-        day_str = day.strftime("%Y-%m-%d")
-        day_urges = [u for u in urges if u["created_at"][:10] == day_str]
-        day_resisted = len([u for u in day_urges if u.get("outcome") == "resisted"])
-        weekly_urges.append({"date": day_str, "label": day.strftime("%a"), "urges": len(day_urges), "resisted": day_resisted})
-
-    # Monthly data (last 30 days)
-    monthly_urges = []
-    for i in range(30):
-        day = now - timedelta(days=29-i)
-        day_str = day.strftime("%Y-%m-%d")
-        day_urges = [u for u in urges if u["created_at"][:10] == day_str]
-        day_resisted = len([u for u in day_urges if u.get("outcome") == "resisted"])
-        monthly_urges.append({"date": day_str, "urges": len(day_urges), "resisted": day_resisted})
-
-    # Best streak ever
-    all_relapse_dates = sorted([r["created_at"] for r in relapses])
-    best_streak = streak_days
-    if len(all_relapse_dates) > 1:
-        for i in range(1, len(all_relapse_dates)):
-            d1 = datetime.fromisoformat(all_relapse_dates[i-1]) if isinstance(all_relapse_dates[i-1], str) else all_relapse_dates[i-1]
-            d2 = datetime.fromisoformat(all_relapse_dates[i]) if isinstance(all_relapse_dates[i], str) else all_relapse_dates[i]
-            gap = (d2 - d1).days
-            if gap > best_streak:
-                best_streak = gap
+    weekly_urges = calculate_period_data(urges, now, 7)
+    monthly_urges = calculate_period_data(urges, now, 30)
+    best_streak = calculate_best_streak(relapses, streak_days)
 
     return {
         "streak_days": streak_days,

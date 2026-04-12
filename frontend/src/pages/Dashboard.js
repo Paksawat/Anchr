@@ -23,8 +23,8 @@ export default function Dashboard() {
         ]);
         setStats(statsRes.data);
         setMotivations(motRes.data);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // Silently handle — stats will show defaults
       } finally {
         setLoading(false);
       }
@@ -219,7 +219,7 @@ export default function Dashboard() {
                 const maxUrges = Math.max(...stats.weekly.map(d => d.urges), 1);
                 const height = day.urges > 0 ? Math.max((day.urges / maxUrges) * 100, 12) : 4;
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
                     <div className="w-full flex flex-col justify-end" style={{ height: '100px' }}>
                       <div
                         className="w-full rounded-t-lg transition-all duration-300"
