@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Leaf, Mail, Lock, User, ArrowRight, Globe } from 'lucide-react';
+import { Anchor, Mail, Lock, User, ArrowRight, Globe } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -62,7 +62,7 @@ export default function AuthPage() {
 
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-5" style={{ background: '#A4C3B2' }}>
-            <Leaf className="w-8 h-8" style={{ color: '#2A3A35' }} strokeWidth={1.5} />
+            <Anchor className="w-8 h-8" style={{ color: '#2A3A35' }} strokeWidth={1.5} />
           </div>
           <h1 className="font-heading text-4xl sm:text-5xl font-light tracking-tight" style={{ color: '#2A3A35' }}>
             {t('auth_title')}

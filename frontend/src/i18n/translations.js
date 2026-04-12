@@ -1,8 +1,8 @@
 const translations = {
   en: {
     // Auth
-    auth_title: 'Habit Reset',
-    auth_subtitle: 'Your journey to a healthier you starts here',
+    auth_title: 'Anchr',
+    auth_subtitle: 'Stay grounded. Break free.',
     sign_in: 'Sign In',
     sign_up: 'Sign Up',
     email: 'Email',
@@ -212,8 +212,8 @@ const translations = {
 
   da: {
     // Auth
-    auth_title: 'Habit Reset',
-    auth_subtitle: 'Din rejse mod et sundere dig starter her',
+    auth_title: 'Anchr',
+    auth_subtitle: 'Hold fast. Bliv fri.',
     sign_in: 'Log ind',
     sign_up: 'Opret konto',
     email: 'E-mail',

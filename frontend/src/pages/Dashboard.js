@@ -7,9 +7,31 @@ import StatsGrid from '../components/dashboard/StatsGrid';
 import QuickActions from '../components/dashboard/QuickActions';
 import WeeklyChart from '../components/dashboard/WeeklyChart';
 import axios from 'axios';
-import { Flame, Heart, ArrowRight } from 'lucide-react';
+import { Flame, Heart, ArrowRight, AlertTriangle, Lightbulb, TrendingUp, Sparkles } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+function InsightCard({ insight }) {
+  const iconMap = { warning: AlertTriangle, insight: Lightbulb, positive: TrendingUp, suggestion: Sparkles };
+  const colorMap = { warning: '#E5989B', insight: '#6B9080', positive: '#6B9080', suggestion: '#A8DADC' };
+  const bgMap = { warning: '#E5989B15', insight: '#6B908015', positive: '#A4C3B215', suggestion: '#A8DADC15' };
+  const Icon = iconMap[insight.type] || Lightbulb;
+
+  return (
+    <div className="p-4 rounded-xl" style={{ background: bgMap[insight.type], border: `1px solid ${colorMap[insight.type]}33` }}>
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: `${colorMap[insight.type]}22` }}>
+          <Icon className="w-4 h-4" style={{ color: colorMap[insight.type] }} strokeWidth={1.5} />
+        </div>
+        <div>
+          <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>{insight.title}</p>
+          <p className="text-xs mt-0.5" style={{ color: '#7A8B85' }}>{insight.message}</p>
+          {insight.action && <p className="text-xs mt-1 font-medium" style={{ color: colorMap[insight.type] }}>{insight.action}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -17,17 +39,24 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [motivations, setMotivations] = useState([]);
+  const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, motRes] = await Promise.all([
+        const requests = [
           axios.get(`${API}/stats`, { withCredentials: true }),
           axios.get(`${API}/motivations`, { withCredentials: true }),
-        ]);
-        setStats(statsRes.data);
-        setMotivations(motRes.data);
+        ];
+        if (isPaid) {
+          requests.push(axios.get(`${API}/insights`, { withCredentials: true }));
+        }
+        const results = await Promise.all(requests);
+        setStats(results[0].data);
+        setMotivations(results[1].data);
+        if (results[2]) setInsights(results[2].data);
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
       } finally {
@@ -48,6 +77,8 @@ export default function Dashboard() {
     ? motivations[Math.floor(Math.random() * motivations.length)]
     : null;
 
+  const urgeLabel = user?.urge_type === 'other' ? user?.custom_urge_type : user?.urge_type;
+
   return (
     <AppLayout>
       <div data-testid="dashboard-page" className="space-y-8">
@@ -57,8 +88,16 @@ export default function Dashboard() {
           </h1>
           <p className="mt-2 text-base" style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}>
             {t('dashboard_subtitle')}
+            {urgeLabel && <span className="ml-2 px-3 py-0.5 rounded-full text-xs font-medium" style={{ background: '#6B908015', color: '#6B9080' }}>Working on: {urgeLabel}</span>}
           </p>
         </div>
+
+        {/* Anti-relapse insights (paid) */}
+        {isPaid && insights.length > 0 && (
+          <div className="space-y-3">
+            {insights.map((insight, i) => <InsightCard key={i} insight={insight} />)}
+          </div>
+        )}
 
         <button
           data-testid="urge-button"

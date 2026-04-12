@@ -256,6 +256,164 @@ class HabitTrackerAPITester:
             }
         )
 
+    def test_new_anchr_endpoints(self):
+        """Test new Anchr-specific endpoints"""
+        print("\n🆕 Testing New Anchr Endpoints...")
+        
+        # Test urge types
+        urge_types = self.run_test(
+            "GET /api/urge-types",
+            "GET",
+            "urge-types",
+            200
+        )
+        
+        # Test profile update with urge type
+        self.run_test(
+            "PUT /api/profile (urge type)",
+            "PUT",
+            "profile",
+            200,
+            data={"urge_type": "smoking"}
+        )
+        
+        # Test programs endpoints
+        programs = self.run_test(
+            "GET /api/programs",
+            "GET",
+            "programs",
+            200
+        )
+        
+        # Test program detail
+        if programs and len(programs) > 0:
+            program_id = programs[0].get('program_id')
+            if program_id:
+                self.run_test(
+                    f"GET /api/programs/{program_id}",
+                    "GET",
+                    f"programs/{program_id}",
+                    200
+                )
+                
+                # Test program enrollment
+                self.run_test(
+                    f"POST /api/programs/{program_id}/enroll",
+                    "POST",
+                    f"programs/{program_id}/enroll",
+                    200
+                )
+                
+                # Test complete day
+                self.run_test(
+                    f"POST /api/programs/{program_id}/complete-day",
+                    "POST",
+                    f"programs/{program_id}/complete-day",
+                    200,
+                    data={"day": 1, "reflection": "Test reflection"}
+                )
+        
+        # Test habits endpoints
+        self.run_test(
+            "GET /api/habits/presets",
+            "GET",
+            "habits/presets",
+            200
+        )
+        
+        self.run_test(
+            "GET /api/habits",
+            "GET",
+            "habits",
+            200
+        )
+        
+        # Test create habit
+        habit_data = self.run_test(
+            "POST /api/habits",
+            "POST",
+            "habits",
+            200,
+            data={"name": "Test Habit", "icon": "check", "category": "custom"}
+        )
+        
+        habit_id = None
+        if habit_data:
+            habit_id = habit_data.get('habit_id')
+            
+        # Test habit toggle
+        if habit_id:
+            today = datetime.now().strftime('%Y-%m-%d')
+            self.run_test(
+                f"POST /api/habits/{habit_id}/toggle",
+                "POST",
+                f"habits/{habit_id}/toggle",
+                200,
+                data={"date": today}
+            )
+            
+            # Test delete habit
+            self.run_test(
+                f"DELETE /api/habits/{habit_id}",
+                "DELETE",
+                f"habits/{habit_id}",
+                200
+            )
+        
+        # Test habit completions
+        self.run_test(
+            "GET /api/habits/completions",
+            "GET",
+            "habits/completions",
+            200
+        )
+        
+        # Test buddy endpoints
+        self.run_test(
+            "GET /api/buddies",
+            "GET",
+            "buddies",
+            200
+        )
+        
+        # Test create buddy
+        buddy_data = self.run_test(
+            "POST /api/buddies",
+            "POST",
+            "buddies",
+            200,
+            data={"name": "Test Buddy", "email": "buddy@test.com", "relationship": "friend"}
+        )
+        
+        buddy_id = None
+        if buddy_data:
+            buddy_id = buddy_data.get('buddy_id')
+            
+        # Test buddy alert (mocked)
+        if buddy_id:
+            self.run_test(
+                f"POST /api/buddies/{buddy_id}/alert",
+                "POST",
+                f"buddies/{buddy_id}/alert",
+                200
+            )
+            
+            # Test delete buddy
+            self.run_test(
+                f"DELETE /api/buddies/{buddy_id}",
+                "DELETE",
+                f"buddies/{buddy_id}",
+                200
+            )
+        
+        # Test insights endpoint
+        self.run_test(
+            "GET /api/insights",
+            "GET",
+            "insights",
+            200
+        )
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🧪 Starting Habit Tracker API Tests...")
@@ -271,6 +429,7 @@ class HabitTrackerAPITester:
             self.test_motivation_endpoints()
             self.test_relapse_endpoints()
             self.test_reminder_endpoints()
+            self.test_new_anchr_endpoints()  # Add new Anchr endpoints
             
             # Test logout at the end
             print("\n🔐 Testing Logout...")
