@@ -1,34 +1,45 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=Figtree:wght@300;400;500;600&display=swap');
+
+.font-heading {
+  font-family: 'Outfit', sans-serif;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #E8E6E1 transparent;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+*::-webkit-scrollbar {
+  width: 6px;
 }
 
-.App-link {
-    color: #61dafb;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+*::-webkit-scrollbar-thumb {
+  background: #E8E6E1;
+  border-radius: 3px;
+}
+
+/* Smooth transitions */
+a, button {
+  transition: all 0.2s ease;
+}
+
+/* Remove default focus outlines, add custom */
+*:focus-visible {
+  outline: 2px solid #A4C3B2;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Pulse animation for urge button */
+@keyframes gentle-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.urge-pulse {
+  animation: gentle-pulse 3s ease-in-out infinite;
 }
