@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -9,6 +10,7 @@ export default function AuthCallback() {
   const hasProcessed = useRef(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (hasProcessed.current) return;
@@ -36,7 +38,7 @@ export default function AuthCallback() {
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9F8F6' }}>
       <div className="text-center">
         <div className="w-12 h-12 rounded-full mx-auto mb-4 animate-pulse" style={{ background: '#A4C3B2' }} />
-        <p style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}>Signing you in...</p>
+        <p style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}>{t('signing_in')}</p>
       </div>
     </div>
   );

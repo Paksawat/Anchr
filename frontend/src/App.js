@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
@@ -37,9 +38,11 @@ function AppRouter() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRouter />
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <AppRouter />
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

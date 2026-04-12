@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   LayoutDashboard, Flame, TrendingUp, Heart, Settings,
-  LogOut, Menu, X, Leaf, Shield
+  LogOut, Menu, X, Leaf, Globe
 } from 'lucide-react';
-
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/urge-timer', icon: Flame, label: 'Urge Timer' },
-  { to: '/progress', icon: TrendingUp, label: 'Progress' },
-  { to: '/motivation', icon: Heart, label: 'Motivation' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-];
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
+  const { t, lang, setLang } = useLanguage();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: t('nav_dashboard') },
+    { to: '/urge-timer', icon: Flame, label: t('nav_urge_timer') },
+    { to: '/progress', icon: TrendingUp, label: t('nav_progress') },
+    { to: '/motivation', icon: Heart, label: t('nav_motivation') },
+    { to: '/settings', icon: Settings, label: t('nav_settings') },
+  ];
 
   const handleLogout = async () => {
     await logout();
@@ -40,7 +42,7 @@ export default function AppLayout({ children }) {
             <NavLink
               key={item.to}
               to={item.to}
-              data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
+              data-testid={`nav-${item.to.slice(1)}`}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive ? 'shadow-sm' : 'hover:-translate-y-px'
@@ -57,7 +59,20 @@ export default function AppLayout({ children }) {
           ))}
         </nav>
 
-        <div className="pt-6 border-t" style={{ borderColor: '#E8E6E1' }}>
+        {/* Language Switcher */}
+        <div className="mb-4">
+          <button
+            data-testid="lang-toggle"
+            onClick={() => setLang(lang === 'en' ? 'da' : 'en')}
+            className="flex items-center gap-2 px-4 py-2.5 w-full rounded-xl text-sm font-medium transition-all duration-200"
+            style={{ background: '#F0EFEB', color: '#7A8B85' }}
+          >
+            <Globe className="w-4 h-4" strokeWidth={1.5} />
+            {lang === 'en' ? 'Dansk' : 'English'}
+          </button>
+        </div>
+
+        <div className="pt-4 border-t" style={{ borderColor: '#E8E6E1' }}>
           <div className="flex items-center gap-3 px-3 mb-4">
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium" style={{ background: '#A4C3B2', color: '#2A3A35' }}>
               {user?.name?.[0]?.toUpperCase() || 'U'}
@@ -72,11 +87,11 @@ export default function AppLayout({ children }) {
             onClick={handleLogout}
             className="flex items-center gap-2 px-4 py-2.5 w-full rounded-xl text-sm transition-colors duration-200"
             style={{ color: '#7A8B85' }}
-            onMouseEnter={(e) => e.target.style.background = '#F0EFEB'}
-            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#F0EFEB'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
             <LogOut className="w-4 h-4" strokeWidth={1.5} />
-            Sign Out
+            {t('sign_out')}
           </button>
         </div>
       </aside>
@@ -89,9 +104,14 @@ export default function AppLayout({ children }) {
           </div>
           <span className="font-heading text-lg font-medium" style={{ color: '#2A3A35' }}>Habit Reset</span>
         </div>
-        <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="w-6 h-6" style={{ color: '#2A3A35' }} /> : <Menu className="w-6 h-6" style={{ color: '#2A3A35' }} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button data-testid="mobile-lang-toggle" onClick={() => setLang(lang === 'en' ? 'da' : 'en')} className="p-2 rounded-lg" style={{ color: '#7A8B85' }}>
+            <Globe className="w-5 h-5" strokeWidth={1.5} />
+          </button>
+          <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="w-6 h-6" style={{ color: '#2A3A35' }} /> : <Menu className="w-6 h-6" style={{ color: '#2A3A35' }} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -104,10 +124,8 @@ export default function AppLayout({ children }) {
                   key={item.to}
                   to={item.to}
                   onClick={() => setMobileOpen(false)}
-                  data-testid={`mobile-nav-${item.label.toLowerCase().replace(' ', '-')}`}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200`
-                  }
+                  data-testid={`mobile-nav-${item.to.slice(1)}`}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
                   style={({ isActive }) => ({
                     background: isActive ? '#F0EFEB' : 'transparent',
                     color: isActive ? '#2A3A35' : '#7A8B85',
@@ -121,7 +139,7 @@ export default function AppLayout({ children }) {
             <div className="mt-6 pt-6 border-t" style={{ borderColor: '#E8E6E1' }}>
               <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2.5 w-full rounded-xl text-sm" style={{ color: '#7A8B85' }}>
                 <LogOut className="w-4 h-4" strokeWidth={1.5} />
-                Sign Out
+                {t('sign_out')}
               </button>
             </div>
           </div>
