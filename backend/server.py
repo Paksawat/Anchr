@@ -72,16 +72,19 @@ class RelapseCreate(BaseModel):
 
 # ─── Auth Helpers ───
 
-async def get_current_user(request: Request) -> dict:
-    token = None
+def _extract_token(request: Request) -> str:
+    """Extract session token from cookies or Authorization header."""
     cookie_token = request.cookies.get("session_token")
     if cookie_token:
-        token = cookie_token
+        return cookie_token
     auth_header = request.headers.get("Authorization")
-    if not token and auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split(" ")[1]
+    return None
+
+
+async def _validate_session(token: str) -> dict:
+    """Validate session token and check expiry. Returns session doc or raises."""
     session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=401, detail="Invalid session")
@@ -92,6 +95,14 @@ async def get_current_user(request: Request) -> dict:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     if expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Session expired")
+    return session
+
+
+async def get_current_user(request: Request) -> dict:
+    token = _extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    session = await _validate_session(token)
     user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="User not found")

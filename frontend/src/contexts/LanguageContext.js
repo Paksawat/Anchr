@@ -35,8 +35,11 @@ export function LanguageProvider({ children }) {
           setLangState('da');
           localStorage.setItem(STORAGE_KEY, 'da');
         }
-      } catch {
-        // Geo detection failed — keep English default
+      } catch (error) {
+        // Geo detection failed or aborted — keep English default
+        if (error?.name !== 'AbortError') {
+          console.error('Geo detection failed:', error);
+        }
       } finally {
         setGeoChecked(true);
       }

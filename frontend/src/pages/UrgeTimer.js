@@ -167,7 +167,7 @@ export default function UrgeTimer() {
     axios.get(`${API}/motivations`, { withCredentials: true })
       .then(res => setMotivations(res.data))
       .catch((error) => { console.error('Failed to load motivations:', error); });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {

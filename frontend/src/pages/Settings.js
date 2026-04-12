@@ -36,7 +36,7 @@ export default function Settings() {
       setReminders(remRes.data);
       setRelapses(relRes.data);
     }).catch((error) => { console.error('Failed to load settings:', error); });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveReminders = async () => {
     setSaving(true);
