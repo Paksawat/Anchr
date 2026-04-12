@@ -30,12 +30,12 @@ export default function AppLayout({ children }) {
     <div className="min-h-screen flex" style={{ background: '#F9F8F6' }}>
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 p-6 border-r" style={{ background: '#FFFFFF', borderColor: '#E8E6E1' }}>
-        <div className="flex items-center gap-3 mb-10">
+        <NavLink to="/dashboard" className="flex items-center gap-3 mb-10 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: '#A4C3B2' }}>
             <Leaf className="w-5 h-5" style={{ color: '#2A3A35' }} strokeWidth={1.5} />
           </div>
           <span className="font-heading text-xl font-medium tracking-tight" style={{ color: '#2A3A35' }}>Habit Reset</span>
-        </div>
+        </NavLink>
 
         <nav className="flex-1 space-y-1">
           {navItems.map((item) => (
@@ -98,12 +98,12 @@ export default function AppLayout({ children }) {
 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b" style={{ background: '#FFFFFF', borderColor: '#E8E6E1' }}>
-        <div className="flex items-center gap-2">
+        <NavLink to="/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#A4C3B2' }}>
             <Leaf className="w-4 h-4" style={{ color: '#2A3A35' }} strokeWidth={1.5} />
           </div>
           <span className="font-heading text-lg font-medium" style={{ color: '#2A3A35' }}>Habit Reset</span>
-        </div>
+        </NavLink>
         <div className="flex items-center gap-2">
           <button data-testid="mobile-lang-toggle" onClick={() => setLang(lang === 'en' ? 'da' : 'en')} className="p-2 rounded-lg" style={{ color: '#7A8B85' }}>
             <Globe className="w-5 h-5" strokeWidth={1.5} />

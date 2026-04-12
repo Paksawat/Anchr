@@ -34,7 +34,19 @@ a, button {
   border-radius: 8px;
 }
 
-/* Pulse animation for urge button */
+/* Hide Emergent badge */
+[data-emergent-badge],
+#emergent-badge,
+a[href*="emergent.sh"],
+div[style*="Made with"],
+div[style*="position: fixed"][style*="bottom"],
+div[style*="z-index: 9999"],
+div[style*="z-index: 99999"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 @keyframes gentle-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.02); }
