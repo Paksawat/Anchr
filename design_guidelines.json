@@ -1,0 +1,113 @@
+{
+  "theme": "light",
+  "archetype": "1 (Organic & Earthy)",
+  "design_philosophy": {
+    "core_principles": [
+      "Calm minimalism: Heavy whitespace, progressive disclosure, low cognitive load.",
+      "Low-stimulus visual design: Muted color palettes, no sharp contrasts or alarming reds.",
+      "Empathy-first recovery: Focus on 'growth maps' and trend lines rather than just unbroken streaks to avoid shame upon relapse.",
+      "Tactile grounding: Use soft neumorphism and subtle borders to make components feel tangible, anchoring the user during an urge."
+    ],
+    "emotion": "Empathetic, grounding, safe, supportive, non-punitive."
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Outfit",
+      "body": "Figtree"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-light tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-normal tracking-tight",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small_labels": "text-sm tracking-[0.1em] uppercase text-muted-foreground"
+    }
+  },
+  "colors": {
+    "background": {
+      "main": "#F9F8F6",
+      "card": "#FFFFFF",
+      "alt": "#F0EFEB"
+    },
+    "text": {
+      "primary": "#2A3A35",
+      "secondary": "#7A8B85",
+      "muted": "#A3B1AA"
+    },
+    "primary": {
+      "base": "#6B9080",
+      "hover": "#5A7A6C",
+      "light": "#A4C3B2"
+    },
+    "accent": {
+      "urge_warning": "#E5989B",
+      "urge_hover": "#D58A8D",
+      "calm_blue": "#A8DADC",
+      "warm_sand": "#E2D4C8"
+    },
+    "border": "#E8E6E1"
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "Generous spacing. Use p-6, p-8, p-12 for containers. Gap-6 to gap-8 in bento grids.",
+    "grid_strategy": "The 'Bento' Grid Protocol. Mode B: Density but with vast internal padding. grid-cols-1 md:grid-cols-3. The main 'Urge' CTA should span full width on mobile, col-span-2 on desktop.",
+    "alignment": "Left-aligned content for readability, centered for breathing exercises and major CTAs to create focus."
+  },
+  "components": {
+    "cards": {
+      "style": "Soft Tactile UI: Flat white background, 1px subtle border (border-[#E8E6E1]), soft diffuse shadow (shadow-sm). rounded-2xl or rounded-3xl for approachability."
+    },
+    "buttons": {
+      "primary": "Solid #6B9080 background, text-white, rounded-full for friendly feel. hover:bg-[#5A7A6C] transition-colors duration-300.",
+      "urge_cta": "Massive button. Solid #E5989B (Muted Rose) background, text-white. pulse animation when active.",
+      "secondary": "bg-[#F0EFEB] text-[#2A3A35] hover:bg-[#E8E6E1]."
+    },
+    "inputs": {
+      "style": "Shadcn defaults customized. rounded-xl, border-[#E8E6E1], focus:ring-2 focus:ring-[#A4C3B2] focus:border-transparent bg-white."
+    },
+    "data_visualization": {
+      "style": "Use smooth line charts (Recharts) with area gradients using primary colors (#6B9080) for progress. Avoid red/green 'pass/fail' binary charts."
+    }
+  },
+  "motion_and_interactions": {
+    "hover_states": "Soft lift (-translate-y-1) and slight shadow increase (shadow-md).",
+    "breathing_timer": "Use Framer Motion for a slow, expansive, rhythmic scale animation on a circle. 4s inhale (scale 1 to 1.5), 4s hold, 6s exhale (scale 1.5 to 1).",
+    "page_transitions": "Fade in with a slight upward drift (y: 10 to 0) to feel uplifting."
+  },
+  "media": {
+    "image_urls": {
+      "breathing_visual": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/e72ca86b-41c3-4adc-96b7-4c242f3b411d/images/d0bd6e1d2cccb8e9dd987b49a241f36e26a3bb909aeb4098901b3da90ad166f9.png",
+        "description": "A minimal, peaceful, abstract breathing circle visualization",
+        "category": "timer_background"
+      },
+      "calming_abstract": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/e72ca86b-41c3-4adc-96b7-4c242f3b411d/images/7a7fc26b5a92a57045791642f2b3a70155190f4c682a324af1e2d73b69d956c9.png",
+        "description": "Abstract soft 3d shapes in sage green and warm sand colors",
+        "category": "dashboard_hero_illustration"
+      },
+      "peaceful_water": {
+        "url": "https://images.unsplash.com/photo-1708901083129-6922dff806cc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxwZWFjZWZ1bCUyMG5hdHVyZSUyMHRleHR1cmV8ZW58MHx8fHwxNzc1OTg1MzA0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "A body of water with a boat in the distance",
+        "category": "coping_tools_background"
+      },
+      "moss_texture": {
+        "url": "https://images.unsplash.com/photo-1760617933676-0949fcd92433?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwzfHxwZWFjZWZ1bCUyMG5hdHVyZSUyMHRleHR1cmV8ZW58MHx8fHwxNzc1OTg1MzA0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Moss-covered tree trunk in a lush forest",
+        "category": "motivation_card_background"
+      }
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 1.5, rounded edges. Size 20px for standard, 24px for key actions."
+  },
+  "instructions_to_main_agent": [
+    "Install and use 'Outfit' and 'Figtree' from Google Fonts.",
+    "Use standard Tailwind classes mapped to the custom color palette.",
+    "Implement the Urge Timer as the most prominent feature on the dashboard, using Framer Motion for the breathing circle.",
+    "Ensure the Relapse Recovery System uses encouraging copy ('You slipped. Let's reset.') instead of negative, failure-oriented language.",
+    "All interactive elements MUST have data-testid attributes (e.g., data-testid='urge-button').",
+    "Use Recharts for progress tracking, opting for smooth area charts with #A4C3B2 gradients.",
+    "Avoid the default Shadcn look by rounding borders to `rounded-2xl` and padding generously."
+  ]
+}
