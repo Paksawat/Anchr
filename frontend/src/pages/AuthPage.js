@@ -40,7 +40,7 @@ export default function AuthPage() {
         withCredentials: true,
       });
       setUser(res.data);
-      navigate('/dashboard');
+      navigate(isLogin ? '/dashboard' : '/onboarding');
     } catch (err) {
       setError(err.response?.data?.detail || 'Something went wrong');
     } finally {

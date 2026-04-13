@@ -31,7 +31,9 @@ export default function AuthCallback() {
           { withCredentials: true },
         );
         setUser(res.data);
-        navigate('/dashboard', { replace: true, state: { user: res.data } });
+        // New Google users have no urge_type set yet — send them to onboarding
+        const isNewUser = !res.data.urge_type;
+        navigate(isNewUser ? '/onboarding' : '/dashboard', { replace: true });
       } catch {
         navigate('/login');
       }
