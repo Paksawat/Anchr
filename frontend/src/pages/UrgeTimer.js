@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Check } from 'lucide-react';
+import { Flame, Check, ChevronDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   Tabs,
@@ -39,6 +40,19 @@ const formatTime = (s) => {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 };
 
+const PRESET_URGE_TYPES = [
+  { id: 'smoking', label: 'Smoking' },
+  { id: 'drinking', label: 'Drinking' },
+  { id: 'gambling', label: 'Gambling' },
+  { id: 'drugs', label: 'Drugs' },
+  { id: 'overeating', label: 'Overeating' },
+  { id: 'social_media', label: 'Social Media' },
+  { id: 'shopping', label: 'Shopping' },
+  { id: 'pornography', label: 'Pornography' },
+  { id: 'gaming', label: 'Gaming' },
+  { id: 'other', label: 'Other' },
+];
+
 function SetupPhase({
   t,
   timerDuration,
@@ -52,6 +66,10 @@ function SetupPhase({
   setIntensity,
   notes,
   setNotes,
+  urgeType,
+  setUrgeType,
+  customUrgeType,
+  setCustomUrgeType,
   onStart,
 }) {
   const TRIGGERS_KEYS = [
@@ -96,6 +114,42 @@ function SetupPhase({
         >
           {t('urge_timer_subtitle')}
         </p>
+      </div>
+      <div
+        className="rounded-2xl p-6 shadow-sm"
+        style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
+      >
+        <h3
+          className="text-sm font-medium mb-3 uppercase tracking-wider"
+          style={{ color: '#A3B1AA' }}
+        >
+          {t('urge_type_label')}
+        </h3>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {PRESET_URGE_TYPES.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => { setUrgeType(opt.id); if (opt.id !== 'other') setCustomUrgeType(''); }}
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+              style={{
+                background: urgeType === opt.id ? '#6B9080' : '#F0EFEB',
+                color: urgeType === opt.id ? '#FFFFFF' : '#7A8B85',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {urgeType === 'other' && (
+          <input
+            type="text"
+            value={customUrgeType}
+            onChange={(e) => setCustomUrgeType(e.target.value)}
+            placeholder={t('custom_urge_placeholder')}
+            className="w-full mt-2 px-3 py-2 rounded-xl text-sm"
+            style={{ border: '1px solid #E8E6E1', color: '#2A3A35', outline: 'none' }}
+          />
+        )}
       </div>
       <div
         className="rounded-2xl p-6 shadow-sm"
@@ -396,6 +450,7 @@ function CompletePhase({ t, onOutcome }) {
 export default function UrgeTimer() {
   const location = useLocation();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const initialTab = location.state?.tab || 'timer';
 
   const [phase, setPhase] = useState('setup');
@@ -407,6 +462,8 @@ export default function UrgeTimer() {
   const [emotion, setEmotion] = useState('');
   const [notes, setNotes] = useState('');
   const [intensity, setIntensity] = useState(5);
+  const [urgeType, setUrgeType] = useState(user?.urge_type || '');
+  const [customUrgeType, setCustomUrgeType] = useState(user?.custom_urge_type || '');
   const [currentUrgeId, setCurrentUrgeId] = useState(null);
   const [encouragement, setEncouragement] = useState(t('encouragement_1'));
   const [motivations, setMotivations] = useState([]);
@@ -464,6 +521,8 @@ export default function UrgeTimer() {
           emotion: emotion || null,
           notes: notes || null,
           intensity,
+          urge_type: urgeType || null,
+          custom_urge_type: urgeType === 'other' ? (customUrgeType || null) : null,
         },
         { withCredentials: true },
       );
@@ -474,7 +533,7 @@ export default function UrgeTimer() {
     } catch (error) {
       console.error('Failed to create urge:', error);
     }
-  }, [trigger, emotion, notes, intensity, timerDuration]);
+  }, [trigger, emotion, notes, intensity, urgeType, customUrgeType, timerDuration]);
 
   const handleOutcome = useCallback(
     async (outcome) => {
@@ -515,8 +574,10 @@ export default function UrgeTimer() {
       setTrigger('');
       setEmotion('');
       setNotes('');
+      setUrgeType(user?.urge_type || '');
+      setCustomUrgeType(user?.custom_urge_type || '');
     },
-    [currentUrgeId, timerDuration, timeLeft, activeTab, trigger, emotion],
+    [currentUrgeId, timerDuration, timeLeft, activeTab, trigger, emotion, user],
   );
 
   return (
@@ -537,6 +598,10 @@ export default function UrgeTimer() {
               setIntensity={setIntensity}
               notes={notes}
               setNotes={setNotes}
+              urgeType={urgeType}
+              setUrgeType={setUrgeType}
+              customUrgeType={customUrgeType}
+              setCustomUrgeType={setCustomUrgeType}
               onStart={startUrge}
             />
           )}

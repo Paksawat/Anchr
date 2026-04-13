@@ -30,6 +30,8 @@ const translations = {
     good_afternoon: 'Good afternoon',
     good_evening: 'Good evening',
     dashboard_subtitle: 'Every moment you choose yourself is a victory',
+    set_urge_type: 'Set what you\'re working on',
+    whats_your_urge: "What are you working on?",
     need_support: 'Need support right now?',
     having_urge: "I'm having an urge",
     urge_cta_desc: 'Start a guided timer, breathing exercises & coping tools',
@@ -55,6 +57,9 @@ const translations = {
     // Urge Timer
     ride_the_wave: 'Ride the Wave',
     urge_timer_subtitle: "Urges are temporary. Let's get through this together.",
+    urge_type_label: 'What urge are you dealing with?',
+    custom_urge_placeholder: 'Describe your urge...',
+    save: 'Save',
     timer_duration: 'Timer Duration',
     whats_happening: "What's happening? (optional)",
     trigger: 'Trigger',
@@ -150,6 +155,8 @@ const translations = {
     no_emotion: 'No emotion',
     in_progress_label: 'In Progress',
     no_urges_yet: "No urges tracked yet. That's okay.",
+    filter_by_urge: 'Filter by urge',
+    all_urges: 'All urges',
 
     // Motivation Wall
     motivation_wall: 'Motivation Wall',
@@ -241,6 +248,8 @@ const translations = {
     good_afternoon: 'God eftermiddag',
     good_evening: 'Godaften',
     dashboard_subtitle: 'Hvert øjeblik du vælger dig selv er en sejr',
+    set_urge_type: 'Sæt hvad du arbejder på',
+    whats_your_urge: 'Hvad arbejder du på?',
     need_support: 'Har du brug for støtte lige nu?',
     having_urge: 'Jeg har en trang',
     urge_cta_desc: 'Start en guidet timer, åndedrætsøvelser & mestringsværktøjer',
@@ -266,6 +275,9 @@ const translations = {
     // Urge Timer
     ride_the_wave: 'Rid bølgen',
     urge_timer_subtitle: 'Tranger er midlertidige. Lad os komme igennem det sammen.',
+    urge_type_label: 'Hvilken trang har du?',
+    custom_urge_placeholder: 'Beskriv din trang...',
+    save: 'Gem',
     timer_duration: 'Timer-varighed',
     whats_happening: 'Hvad sker der? (valgfrit)',
     trigger: 'Udløser',
@@ -361,6 +373,8 @@ const translations = {
     no_emotion: 'Ingen følelse',
     in_progress_label: 'I gang',
     no_urges_yet: 'Ingen tranger registreret endnu. Det er helt okay.',
+    filter_by_urge: 'Filtrer efter trang',
+    all_urges: 'Alle tranger',
 
     // Motivation Wall
     motivation_wall: 'Motivationsvæg',

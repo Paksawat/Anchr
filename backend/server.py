@@ -43,6 +43,8 @@ class UrgeCreate(BaseModel):
     emotion: Optional[str] = None
     notes: Optional[str] = None
     intensity: Optional[int] = 5
+    urge_type: Optional[str] = None
+    custom_urge_type: Optional[str] = None
 
 class UrgeUpdate(BaseModel):
     outcome: str
@@ -227,7 +229,10 @@ async def get_urge_types():
 async def create_urge(data: UrgeCreate, user: dict = Depends(get_current_user)):
     urge_id = f"urge_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
-    urge = {"urge_id": urge_id, "user_id": user["user_id"], "trigger": data.trigger, "emotion": data.emotion, "notes": data.notes, "intensity": data.intensity, "outcome": "in_progress", "duration_seconds": None, "coping_used": None, "hour_of_day": now.hour, "day_of_week": now.strftime("%A"), "created_at": now.isoformat()}
+    # Default urge_type to user's profile urge_type if not provided
+    urge_type = data.urge_type or user.get("urge_type")
+    custom_urge_type = data.custom_urge_type or (user.get("custom_urge_type") if urge_type == "other" else None)
+    urge = {"urge_id": urge_id, "user_id": user["user_id"], "trigger": data.trigger, "emotion": data.emotion, "notes": data.notes, "intensity": data.intensity, "outcome": "in_progress", "duration_seconds": None, "coping_used": None, "urge_type": urge_type, "custom_urge_type": custom_urge_type, "hour_of_day": now.hour, "day_of_week": now.strftime("%A"), "created_at": now.isoformat()}
     await db.urges.insert_one(urge)
     return {k: v for k, v in urge.items() if k != "_id"}
 
@@ -245,10 +250,13 @@ async def update_urge(urge_id: str, data: UrgeUpdate, user: dict = Depends(get_c
 # ─── Stats ───
 
 @api_router.get("/stats")
-async def get_stats(user: dict = Depends(get_current_user)):
+async def get_stats(user: dict = Depends(get_current_user), urge_type: Optional[str] = None):
     now = datetime.now(timezone.utc)
     relapses = await db.relapses.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    urges = await db.urges.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(1000)
+    urge_query = {"user_id": user["user_id"]}
+    if urge_type:
+        urge_query["urge_type"] = urge_type
+    urges = await db.urges.find(urge_query, {"_id": 0}).to_list(1000)
     user_created = user.get("created_at", now.isoformat())
     streak_days = calculate_streak(relapses, user_created, now)
     urges_resisted = len([u for u in urges if u.get("outcome") == "resisted"])
@@ -256,8 +264,11 @@ async def get_stats(user: dict = Depends(get_current_user)):
     return {"streak_days": streak_days, "best_streak": calculate_best_streak(relapses, streak_days), "urges_resisted": urges_resisted, "total_urges": total_urges, "total_relapses": len(relapses), "resist_rate": round(urges_resisted / total_urges * 100) if total_urges > 0 else 0, "weekly": calculate_period_data(urges, now, 7), "monthly": calculate_period_data(urges, now, 30)}
 
 @api_router.get("/stats/triggers")
-async def get_trigger_stats(user: dict = Depends(get_current_user)):
-    urges = await db.urges.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(1000)
+async def get_trigger_stats(user: dict = Depends(get_current_user), urge_type: Optional[str] = None):
+    urge_query = {"user_id": user["user_id"]}
+    if urge_type:
+        urge_query["urge_type"] = urge_type
+    urges = await db.urges.find(urge_query, {"_id": 0}).to_list(1000)
     triggers, emotions, hours = {}, {}, {}
     for u in urges:
         t = u.get("trigger") or "Unknown"

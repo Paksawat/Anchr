@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,6 +15,7 @@ import {
   Lightbulb,
   TrendingUp,
   Sparkles,
+  Plus,
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
@@ -80,14 +81,30 @@ function InsightCard({ insight }) {
   );
 }
 
+const PRESET_URGE_TYPES = [
+  { id: 'smoking', label: 'Smoking' },
+  { id: 'drinking', label: 'Drinking' },
+  { id: 'gambling', label: 'Gambling' },
+  { id: 'drugs', label: 'Drugs' },
+  { id: 'overeating', label: 'Overeating' },
+  { id: 'social_media', label: 'Social Media' },
+  { id: 'shopping', label: 'Shopping' },
+  { id: 'pornography', label: 'Pornography' },
+  { id: 'gaming', label: 'Gaming' },
+  { id: 'other', label: 'Other' },
+];
+
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [motivations, setMotivations] = useState([]);
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showUrgePicker, setShowUrgePicker] = useState(false);
+  const [pickerCustom, setPickerCustom] = useState('');
+  const pickerRef = useRef(null);
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
@@ -115,6 +132,31 @@ export default function Dashboard() {
     fetchData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setShowUrgePicker(false);
+      }
+    };
+    if (showUrgePicker) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showUrgePicker]);
+
+  const saveUrgeType = async (type, custom = '') => {
+    try {
+      const res = await axios.put(
+        `${API}/profile`,
+        { urge_type: type, custom_urge_type: type === 'other' ? custom : null },
+        { withCredentials: true },
+      );
+      setUser(res.data);
+      setShowUrgePicker(false);
+      setPickerCustom('');
+    } catch (err) {
+      console.error('Failed to save urge type:', err);
+    }
+  };
+
   const greeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return t('good_morning');
@@ -140,20 +182,75 @@ export default function Dashboard() {
           >
             {greeting()}, {user?.name?.split(' ')[0]}
           </h1>
-          <p
-            className="mt-2 text-base"
-            style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}
-          >
-            {t('dashboard_subtitle')}
-            {urgeLabel && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p
+              className="text-base"
+              style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}
+            >
+              {t('dashboard_subtitle')}
+            </p>
+            {urgeLabel ? (
               <span
-                className="ml-2 px-3 py-0.5 rounded-full text-xs font-medium"
+                className="px-3 py-0.5 rounded-full text-xs font-medium"
                 style={{ background: '#6B908015', color: '#6B9080' }}
               >
                 Working on: {urgeLabel}
               </span>
+            ) : (
+              <div className="relative" ref={pickerRef}>
+                <button
+                  onClick={() => setShowUrgePicker((v) => !v)}
+                  className="flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-medium transition-all duration-200"
+                  style={{ background: '#F0EFEB', color: '#A3B1AA', border: '1px dashed #C8D5CF' }}
+                >
+                  <Plus className="w-3 h-3" strokeWidth={2} />
+                  {t('set_urge_type')}
+                </button>
+                {showUrgePicker && (
+                  <div
+                    className="absolute top-8 left-0 z-50 rounded-2xl shadow-lg p-4 w-64"
+                    style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
+                  >
+                    <p className="text-xs font-medium mb-3 uppercase tracking-wider" style={{ color: '#A3B1AA' }}>
+                      {t('whats_your_urge')}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {PRESET_URGE_TYPES.map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => { if (opt.id !== 'other') saveUrgeType(opt.id); }}
+                          className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-200"
+                          style={{ background: '#F0EFEB', color: '#7A8B85' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#6B9080'; e.currentTarget.style.color = '#FFF'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#F0EFEB'; e.currentTarget.style.color = '#7A8B85'; }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={pickerCustom}
+                        onChange={(e) => setPickerCustom(e.target.value)}
+                        placeholder={t('custom_urge_placeholder')}
+                        className="flex-1 px-2 py-1.5 rounded-lg text-xs"
+                        style={{ border: '1px solid #E8E6E1', color: '#2A3A35', outline: 'none' }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && pickerCustom.trim()) saveUrgeType('other', pickerCustom.trim()); }}
+                      />
+                      <button
+                        onClick={() => { if (pickerCustom.trim()) saveUrgeType('other', pickerCustom.trim()); }}
+                        className="px-2 py-1.5 rounded-lg text-xs font-medium"
+                        style={{ background: '#6B9080', color: '#FFF' }}
+                      >
+                        {t('save')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </p>
+          </div>
         </div>
 
         {/* Anti-relapse insights (paid) */}

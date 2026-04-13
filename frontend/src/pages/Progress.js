@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useLanguage } from '../contexts/LanguageContext';
 import axios from 'axios';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import {
   AreaChart,
   Area,
@@ -177,6 +184,19 @@ function UrgeActivityChart({ t, stats, period, setPeriod }) {
   );
 }
 
+const PRESET_URGE_TYPES = [
+  { id: 'smoking', label: 'Smoking' },
+  { id: 'drinking', label: 'Drinking' },
+  { id: 'gambling', label: 'Gambling' },
+  { id: 'drugs', label: 'Drugs' },
+  { id: 'overeating', label: 'Overeating' },
+  { id: 'social_media', label: 'Social Media' },
+  { id: 'shopping', label: 'Shopping' },
+  { id: 'pornography', label: 'Pornography' },
+  { id: 'gaming', label: 'Gaming' },
+  { id: 'other', label: 'Other' },
+];
+
 export default function Progress() {
   const { t } = useLanguage();
   const [stats, setStats] = useState(null);
@@ -184,26 +204,39 @@ export default function Progress() {
   const [urges, setUrges] = useState([]);
   const [period, setPeriod] = useState('weekly');
   const [loading, setLoading] = useState(true);
+  const [urgeTypeFilter, setUrgeTypeFilter] = useState('all');
+  const [availableUrgeTypes, setAvailableUrgeTypes] = useState([]);
+
+  const fetchData = useCallback(async (filter) => {
+    try {
+      const params = filter && filter !== 'all' ? { urge_type: filter } : {};
+      const [statsRes, triggersRes, urgesRes] = await Promise.all([
+        axios.get(`${API}/stats`, { params, withCredentials: true }),
+        axios.get(`${API}/stats/triggers`, { params, withCredentials: true }),
+        axios.get(`${API}/urges`, { withCredentials: true }),
+      ]);
+      setStats(statsRes.data);
+      setTriggerStats(triggersRes.data);
+      const allUrges = urgesRes.data;
+      setUrges(allUrges);
+      // Derive which urge types this user has actually logged
+      const types = [...new Set(allUrges.map((u) => u.urge_type).filter(Boolean))];
+      setAvailableUrgeTypes(types);
+    } catch (error) {
+      console.error('Failed to load progress data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [statsRes, triggersRes, urgesRes] = await Promise.all([
-          axios.get(`${API}/stats`, { withCredentials: true }),
-          axios.get(`${API}/stats/triggers`, { withCredentials: true }),
-          axios.get(`${API}/urges`, { withCredentials: true }),
-        ]);
-        setStats(statsRes.data);
-        setTriggerStats(triggersRes.data);
-        setUrges(urgesRes.data);
-      } catch (error) {
-        console.error('Failed to load progress data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
+    fetchData(urgeTypeFilter);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleFilterChange = (val) => {
+    setUrgeTypeFilter(val);
+    fetchData(val);
+  };
 
   if (loading) {
     return (
@@ -221,19 +254,44 @@ export default function Progress() {
   return (
     <AppLayout>
       <div data-testid="progress-page" className="space-y-6">
-        <div>
-          <h1
-            className="font-heading text-4xl sm:text-5xl font-light tracking-tight"
-            style={{ color: '#2A3A35' }}
-          >
-            {t('your_progress')}
-          </h1>
-          <p
-            className="mt-2"
-            style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}
-          >
-            {t('progress_subtitle')}
-          </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1
+              className="font-heading text-4xl sm:text-5xl font-light tracking-tight"
+              style={{ color: '#2A3A35' }}
+            >
+              {t('your_progress')}
+            </h1>
+            <p
+              className="mt-2"
+              style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}
+            >
+              {t('progress_subtitle')}
+            </p>
+          </div>
+          {availableUrgeTypes.length > 1 && (
+            <div className="shrink-0 mt-1">
+              <Select value={urgeTypeFilter} onValueChange={handleFilterChange}>
+                <SelectTrigger
+                  className="rounded-xl text-sm h-9 min-w-[140px]"
+                  style={{ border: '1px solid #E8E6E1', color: '#2A3A35' }}
+                >
+                  <SelectValue placeholder={t('filter_by_urge')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('all_urges')}</SelectItem>
+                  {availableUrgeTypes.map((type) => {
+                    const preset = PRESET_URGE_TYPES.find((p) => p.id === type);
+                    return (
+                      <SelectItem key={type} value={type}>
+                        {preset ? preset.label : type}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <StatsCards t={t} stats={stats} />
         <UrgeActivityChart
@@ -246,7 +304,10 @@ export default function Progress() {
           <TriggerInsights t={t} triggerStats={triggerStats} />
           <PeakTimes t={t} triggerStats={triggerStats} />
         </div>
-        <RecentUrges t={t} urges={urges} />
+        <RecentUrges
+          t={t}
+          urges={urgeTypeFilter === 'all' ? urges : urges.filter((u) => u.urge_type === urgeTypeFilter)}
+        />
       </div>
     </AppLayout>
   );
