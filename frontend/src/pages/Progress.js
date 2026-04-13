@@ -280,14 +280,13 @@ export default function Progress() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('all_urges')}</SelectItem>
-                  {availableUrgeTypes.map((type) => {
-                    const preset = PRESET_URGE_TYPES.find((p) => p.id === type);
-                    return (
-                      <SelectItem key={type} value={type}>
-                        {preset ? preset.label : type}
-                      </SelectItem>
-                    );
-                  })}
+                  {availableUrgeTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type === 'other'
+                        ? t('urge_other')
+                        : t('urge_' + type) || type}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

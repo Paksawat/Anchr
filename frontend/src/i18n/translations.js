@@ -20,10 +20,15 @@ const translations = {
     // Navigation
     nav_dashboard: 'Dashboard',
     nav_urge_timer: 'Urge Timer',
+    nav_programs: 'Programs',
+    nav_habits: 'Habits',
     nav_progress: 'Progress',
     nav_motivation: 'Motivation',
     nav_settings: 'Settings',
     sign_out: 'Sign Out',
+    upgrade_title: 'Anchr Pro',
+    upgrade_desc: 'Unlock programs, habits, deep insights & more',
+    upgrade_btn: 'Upgrade',
 
     // Dashboard
     good_morning: 'Good morning',
@@ -44,6 +49,7 @@ const translations = {
     success: 'success',
     days: 'days',
     quick_actions: 'Quick Actions',
+    log_a_slip: 'Log a Slip',
     breathing: 'Breathing',
     grounding: 'Grounding',
     progress: 'Progress',
@@ -53,6 +59,10 @@ const translations = {
     view_all: 'View all',
     add_one_now: 'Add one now',
     this_week: 'This Week',
+    all_resisted: 'All resisted',
+    partial_resisted: 'Partial / in progress',
+    no_urges: 'No urges',
+    chart_numbers_hint: 'Numbers above bars = total urges that day',
 
     // Urge Timer
     ride_the_wave: 'Ride the Wave',
@@ -114,6 +124,19 @@ const translations = {
     call_desc: 'Reach out to a trusted person',
     step_outside: 'Step outside',
     outside_desc: 'Fresh air can shift your state',
+
+    // Urge types
+    working_on: 'Working on',
+    urge_smoking: 'Smoking',
+    urge_drinking: 'Drinking',
+    urge_gambling: 'Gambling',
+    urge_drugs: 'Drugs',
+    urge_overeating: 'Overeating',
+    urge_social_media: 'Social Media',
+    urge_shopping: 'Shopping',
+    urge_pornography: 'Pornography',
+    urge_gaming: 'Gaming',
+    urge_other: 'Other',
 
     // Triggers
     stress: 'Stress',
@@ -178,6 +201,7 @@ const translations = {
     // Settings
     settings: 'Settings',
     settings_subtitle: 'Manage your preferences and recovery tools',
+    what_im_working_on: "What I'm working on",
     profile: 'Profile',
     reminders: 'Reminders',
     check_in_times: 'Check-in Times',
@@ -185,8 +209,12 @@ const translations = {
     active_days: 'Active Days',
     save_reminders: 'Save Reminders',
     saving: 'Saving...',
+    saved: 'Saved',
+    changes_saved: 'Changes saved',
     recovery_log: 'Recovery Log',
     log_a_slip: 'Log a Slip',
+    slip_dialog_desc: "It's okay. Every moment of honesty is strength. Let's understand what happened.",
+    log_slip_confirm: 'Log this slip',
     slip_title: "You slipped. Let's reset.",
     slip_desc: "A slip isn't a failure. It's a moment of learning. What happened?",
     what_triggered: 'What triggered it?',
@@ -238,10 +266,15 @@ const translations = {
     // Navigation
     nav_dashboard: 'Oversigt',
     nav_urge_timer: 'Trang-timer',
+    nav_programs: 'Programmer',
+    nav_habits: 'Vaner',
     nav_progress: 'Fremskridt',
     nav_motivation: 'Motivation',
     nav_settings: 'Indstillinger',
     sign_out: 'Log ud',
+    upgrade_title: 'Anchr Pro',
+    upgrade_desc: 'Lås op for programmer, vaner, dybdegående indsigter & mere',
+    upgrade_btn: 'Opgrader',
 
     // Dashboard
     good_morning: 'Godmorgen',
@@ -262,6 +295,7 @@ const translations = {
     success: 'succes',
     days: 'dage',
     quick_actions: 'Hurtige handlinger',
+    log_a_slip: 'Log et slip',
     breathing: 'Åndedræt',
     grounding: 'Grounding',
     progress: 'Fremskridt',
@@ -271,10 +305,14 @@ const translations = {
     view_all: 'Se alle',
     add_one_now: 'Tilføj en nu',
     this_week: 'Denne uge',
+    all_resisted: 'Alle modstået',
+    partial_resisted: 'Delvis / i gang',
+    no_urges: 'Ingen tranger',
+    chart_numbers_hint: 'Tal over søjler = samlede tranger den dag',
 
     // Urge Timer
     ride_the_wave: 'Rid bølgen',
-    urge_timer_subtitle: 'Tranger er midlertidige. Lad os komme igennem det sammen.',
+    urge_timer_subtitle: 'Trang er midlertidig. Lad os komme igennem det sammen.',
     urge_type_label: 'Hvilken trang har du?',
     custom_urge_placeholder: 'Beskriv din trang...',
     save: 'Gem',
@@ -286,7 +324,7 @@ const translations = {
     emotion_placeholder: 'Hvordan har du det?',
     intensity: 'Intensitet (1-10)',
     any_notes: 'Eventuelle noter...',
-    start_timer: 'Start timer - Det kan jeg godt',
+    start_timer: 'Start timer - Jeg kan gøre det!',
     remaining: 'tilbage',
     pause: 'Pause',
     resume: 'Genoptag',
@@ -332,6 +370,19 @@ const translations = {
     call_desc: 'Ræk ud til en person du stoler på',
     step_outside: 'Gå udenfor',
     outside_desc: 'Frisk luft kan ændre din tilstand',
+
+    // Urge types
+    working_on: 'Arbejder på',
+    urge_smoking: 'Rygning',
+    urge_drinking: 'Alkohol',
+    urge_gambling: 'Gambling',
+    urge_drugs: 'Stoffer',
+    urge_overeating: 'Overspisning',
+    urge_social_media: 'Sociale medier',
+    urge_shopping: 'Shopping',
+    urge_pornography: 'Pornografi',
+    urge_gaming: 'Gaming',
+    urge_other: 'Andet',
 
     // Triggers
     stress: 'Stress',
@@ -396,6 +447,7 @@ const translations = {
     // Settings
     settings: 'Indstillinger',
     settings_subtitle: 'Administrer dine præferencer og genopretningsværktøjer',
+    what_im_working_on: 'Hvad jeg arbejder på',
     profile: 'Profil',
     reminders: 'Påmindelser',
     check_in_times: 'Check-in tider',
@@ -403,8 +455,12 @@ const translations = {
     active_days: 'Aktive dage',
     save_reminders: 'Gem påmindelser',
     saving: 'Gemmer...',
+    saved: 'Gemt',
+    changes_saved: 'Ændringer gemt',
     recovery_log: 'Genopretningslog',
     log_a_slip: 'Log et fald',
+    slip_dialog_desc: 'Det er okay. Hvert øjeblik af ærlighed er styrke. Lad os forstå hvad der skete.',
+    log_slip_confirm: 'Log dette fald',
     slip_title: 'Du gled. Lad os nulstille.',
     slip_desc: 'Et fald er ikke et nederlag. Det er et øjeblik af læring. Hvad skete der?',
     what_triggered: 'Hvad udløste det?',

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import {
   LayoutDashboard, Flame, TrendingUp, Heart, Settings,
-  LogOut, Menu, X, Anchor, Globe, BookOpen, ListChecks, Lock, Sparkles
+  LogOut, Menu, X, Globe, BookOpen, ListChecks, Lock, Sparkles
 } from 'lucide-react';
 
 export default function AppLayout({ children }) {
@@ -17,8 +17,8 @@ export default function AppLayout({ children }) {
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: t('nav_dashboard'), free: true },
     { to: '/urge-timer', icon: Flame, label: t('nav_urge_timer'), free: true },
-    { to: '/programs', icon: BookOpen, label: 'Programs', free: false },
-    { to: '/habits', icon: ListChecks, label: 'Habits', free: false },
+    { to: '/programs', icon: BookOpen, label: t('nav_programs'), free: false },
+    { to: '/habits', icon: ListChecks, label: t('nav_habits'), free: false },
     { to: '/progress', icon: TrendingUp, label: t('nav_progress'), free: true },
     { to: '/motivation', icon: Heart, label: t('nav_motivation'), free: true },
     { to: '/settings', icon: Settings, label: t('nav_settings'), free: true },
@@ -53,9 +53,7 @@ export default function AppLayout({ children }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 p-6 border-r" style={{ background: '#FFFFFF', borderColor: '#E8E6E1' }}>
         <NavLink to="/dashboard" className="flex items-center gap-3 mb-10 hover:opacity-80 transition-opacity">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: '#A4C3B2' }}>
-            <Anchor className="w-5 h-5" style={{ color: '#2A3A35' }} strokeWidth={1.5} />
-          </div>
+          <img src="/anchr-circle-small.svg" alt="Anchr" className="w-10 h-10" />
           <span className="font-heading text-xl font-medium tracking-tight" style={{ color: '#2A3A35' }}>Anchr</span>
         </NavLink>
 
@@ -67,16 +65,16 @@ export default function AppLayout({ children }) {
           <div className="mb-4 p-4 rounded-xl" style={{ background: '#6B908010', border: '1px solid #6B908033' }}>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4" style={{ color: '#6B9080' }} strokeWidth={1.5} />
-              <span className="text-xs font-medium" style={{ color: '#6B9080' }}>Anchr Pro</span>
+              <span className="text-xs font-medium" style={{ color: '#6B9080' }}>{t('upgrade_title')}</span>
             </div>
-            <p className="text-xs mb-3" style={{ color: '#7A8B85' }}>Unlock programs, habits, deep insights & more</p>
+            <p className="text-xs mb-3" style={{ color: '#7A8B85' }}>{t('upgrade_desc')}</p>
             <button
               data-testid="sidebar-upgrade-btn"
               onClick={() => alert('Coming soon! Anchr Pro will be available shortly.')}
               className="w-full py-2 rounded-lg text-xs font-medium text-white"
               style={{ background: '#6B9080' }}
             >
-              Upgrade
+              {t('upgrade_btn')}
             </button>
           </div>
         )}
@@ -88,7 +86,7 @@ export default function AppLayout({ children }) {
           style={{ background: '#F0EFEB', color: '#7A8B85' }}
         >
           <Globe className="w-4 h-4" strokeWidth={1.5} />
-          {lang === 'en' ? 'Dansk' : 'English'}
+          {lang === 'en' ? 'English' : 'Dansk'}
         </button>
 
         <div className="pt-4 border-t" style={{ borderColor: '#E8E6E1' }}>
@@ -118,9 +116,7 @@ export default function AppLayout({ children }) {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b" style={{ background: '#FFFFFF', borderColor: '#E8E6E1' }}>
         <NavLink to="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#A4C3B2' }}>
-            <Anchor className="w-4 h-4" style={{ color: '#2A3A35' }} strokeWidth={1.5} />
-          </div>
+          <img src="/anchr-circle-small.svg" alt="Anchr" className="w-8 h-8" />
           <span className="font-heading text-lg font-medium" style={{ color: '#2A3A35' }}>Anchr</span>
         </NavLink>
         <div className="flex items-center gap-2">

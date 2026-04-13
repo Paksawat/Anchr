@@ -79,6 +79,9 @@ export default function Settings() {
   const [relapseNotes, setRelapseNotes] = useState('');
   const [relapses, setRelapses] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [reminderSaved, setReminderSaved] = useState(false);
+  const [urgeSaving, setUrgeSaving] = useState(false);
+  const [urgeSaved, setUrgeSaved] = useState(false);
   const [urgeTypes, setUrgeTypes] = useState([]);
   const [selectedUrgeType, setSelectedUrgeType] = useState(
     user?.urge_type || '',
@@ -112,8 +115,11 @@ export default function Settings() {
 
   const saveReminders = async () => {
     setSaving(true);
+    setReminderSaved(false);
     try {
       await axios.put(`${API}/reminders`, reminders, { withCredentials: true });
+      setReminderSaved(true);
+      setTimeout(() => setReminderSaved(false), 3000);
     } catch (error) {
       console.error('Failed to save reminders:', error);
     } finally {
@@ -122,6 +128,8 @@ export default function Settings() {
   };
 
   const saveUrgeType = async () => {
+    setUrgeSaving(true);
+    setUrgeSaved(false);
     try {
       const res = await axios.put(
         `${API}/profile`,
@@ -132,8 +140,12 @@ export default function Settings() {
         { withCredentials: true },
       );
       setUser((prev) => ({ ...prev, ...res.data }));
+      setUrgeSaved(true);
+      setTimeout(() => setUrgeSaved(false), 3000);
     } catch (error) {
       console.error('Failed to save urge type:', error);
+    } finally {
+      setUrgeSaving(false);
     }
   };
 
@@ -306,48 +318,80 @@ export default function Settings() {
               className="font-heading text-lg font-medium"
               style={{ color: '#2A3A35' }}
             >
-              What I'm working on
+              {t('what_im_working_on')}
             </h3>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
-            {urgeTypes.map((ut) => (
+            {urgeTypes.filter((ut) => ut.id !== 'other').map((ut) => (
               <button
                 key={ut.id}
                 data-testid={`setting-urge-${ut.id}`}
-                onClick={() => setSelectedUrgeType(ut.id)}
+                onClick={() => { setSelectedUrgeType(ut.id); setCustomUrge(''); }}
                 className="p-3 rounded-xl text-xs font-medium text-center transition-all"
                 style={{
-                  background:
-                    selectedUrgeType === ut.id ? '#6B908015' : '#F9F8F6',
-                  border:
-                    selectedUrgeType === ut.id
-                      ? '2px solid #6B9080'
-                      : '1px solid #E8E6E1',
+                  background: selectedUrgeType === ut.id ? '#6B908015' : '#F9F8F6',
+                  border: selectedUrgeType === ut.id ? '2px solid #6B9080' : '1px solid #E8E6E1',
                   color: selectedUrgeType === ut.id ? '#6B9080' : '#7A8B85',
                 }}
               >
-                {ut.label}
+                {t('urge_' + ut.id)}
               </button>
             ))}
+            {/* Saved custom urge as its own pill */}
+            {user?.custom_urge_type && (
+              <button
+                data-testid="setting-urge-custom"
+                onClick={() => { setSelectedUrgeType('other'); setCustomUrge(user.custom_urge_type); }}
+                className="p-3 rounded-xl text-xs font-medium text-center transition-all"
+                style={{
+                  background: selectedUrgeType === 'other' && customUrge === user.custom_urge_type ? '#E2D4C833' : '#F9F8F6',
+                  border: selectedUrgeType === 'other' && customUrge === user.custom_urge_type ? '2px solid #C9A87C' : '1px solid #E8E6E1',
+                  color: selectedUrgeType === 'other' && customUrge === user.custom_urge_type ? '#C9A87C' : '#7A8B85',
+                }}
+              >
+                {user.custom_urge_type}
+              </button>
+            )}
+            {/* Add new custom */}
+            <button
+              data-testid="setting-urge-other"
+              onClick={() => { setSelectedUrgeType('other'); setCustomUrge(''); }}
+              className="p-3 rounded-xl text-xs font-medium text-center transition-all"
+              style={{
+                background: selectedUrgeType === 'other' && !customUrge ? '#6B908015' : '#F9F8F6',
+                border: selectedUrgeType === 'other' && !customUrge ? '2px solid #6B9080' : '1px dashed #C8D5CF',
+                color: selectedUrgeType === 'other' && !customUrge ? '#6B9080' : '#A3B1AA',
+              }}
+            >
+              + {t('urge_other')}
+            </button>
           </div>
           {selectedUrgeType === 'other' && (
             <Input
               data-testid="custom-urge-settings"
               value={customUrge}
               onChange={(e) => setCustomUrge(e.target.value)}
-              placeholder="Describe..."
+              placeholder="Describe your urge..."
               className="rounded-xl mb-3"
               style={{ border: '1px solid #E8E6E1' }}
             />
           )}
-          <Button
-            data-testid="save-urge-type"
-            onClick={saveUrgeType}
-            className="rounded-full text-white font-medium text-sm"
-            style={{ background: '#6B9080' }}
-          >
-            Save
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              data-testid="save-urge-type"
+              onClick={saveUrgeType}
+              disabled={urgeSaving}
+              className="rounded-full text-white font-medium text-sm"
+              style={{ background: urgeSaved ? '#4A7A6A' : '#6B9080' }}
+            >
+              {urgeSaving ? t('saving') : urgeSaved ? t('saved') : t('save')}
+            </Button>
+            {urgeSaved && (
+              <span className="text-sm font-medium" style={{ color: '#6B9080' }}>
+                ✓ {t('changes_saved')}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Profile */}
@@ -660,15 +704,22 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
-              <Button
-                data-testid="save-reminders-btn"
-                onClick={saveReminders}
-                disabled={saving}
-                className="rounded-full text-white font-medium"
-                style={{ background: '#6B9080' }}
-              >
-                {saving ? t('saving') : t('save_reminders')}
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  data-testid="save-reminders-btn"
+                  onClick={saveReminders}
+                  disabled={saving}
+                  className="rounded-full text-white font-medium"
+                  style={{ background: reminderSaved ? '#4A7A6A' : '#6B9080' }}
+                >
+                  {saving ? t('saving') : reminderSaved ? t('saved') : t('save_reminders')}
+                </Button>
+                {reminderSaved && (
+                  <span className="text-sm font-medium" style={{ color: '#6B9080' }}>
+                    ✓ {t('changes_saved')}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>

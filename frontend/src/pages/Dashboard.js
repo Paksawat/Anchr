@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Sparkles,
   Plus,
+  X,
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
@@ -105,6 +106,11 @@ export default function Dashboard() {
   const [showUrgePicker, setShowUrgePicker] = useState(false);
   const [pickerCustom, setPickerCustom] = useState('');
   const pickerRef = useRef(null);
+  const [slipDialogOpen, setSlipDialogOpen] = useState(false);
+  const [slipTrigger, setSlipTrigger] = useState('');
+  const [slipEmotion, setSlipEmotion] = useState('');
+  const [slipNotes, setSlipNotes] = useState('');
+  const [slipSaving, setSlipSaving] = useState(false);
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
@@ -157,6 +163,25 @@ export default function Dashboard() {
     }
   };
 
+  const handleLogSlip = async () => {
+    setSlipSaving(true);
+    try {
+      await axios.post(
+        `${API}/relapses`,
+        { trigger: slipTrigger || null, emotion: slipEmotion || null, notes: slipNotes || null },
+        { withCredentials: true },
+      );
+      setSlipDialogOpen(false);
+      setSlipTrigger('');
+      setSlipEmotion('');
+      setSlipNotes('');
+    } catch (err) {
+      console.error('Failed to log slip:', err);
+    } finally {
+      setSlipSaving(false);
+    }
+  };
+
   const greeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return t('good_morning');
@@ -169,8 +194,11 @@ export default function Dashboard() {
       ? motivations[Math.floor(Math.random() * motivations.length)]
       : null;
 
-  const urgeLabel =
-    user?.urge_type === 'other' ? user?.custom_urge_type : user?.urge_type;
+  const urgeLabel = user?.urge_type
+    ? user.urge_type === 'other'
+      ? user.custom_urge_type
+      : t('urge_' + user.urge_type)
+    : null;
 
   return (
     <AppLayout>
@@ -194,7 +222,7 @@ export default function Dashboard() {
                 className="px-3 py-0.5 rounded-full text-xs font-medium"
                 style={{ background: '#6B908015', color: '#6B9080' }}
               >
-                Working on: {urgeLabel}
+                {t('working_on')}: {urgeLabel}
               </span>
             ) : (
               <div className="relative" ref={pickerRef}>
@@ -215,16 +243,16 @@ export default function Dashboard() {
                       {t('whats_your_urge')}
                     </p>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {PRESET_URGE_TYPES.map((opt) => (
+                      {PRESET_URGE_TYPES.filter((o) => o.id !== 'other').map((opt) => (
                         <button
                           key={opt.id}
-                          onClick={() => { if (opt.id !== 'other') saveUrgeType(opt.id); }}
+                          onClick={() => saveUrgeType(opt.id)}
                           className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-200"
                           style={{ background: '#F0EFEB', color: '#7A8B85' }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = '#6B9080'; e.currentTarget.style.color = '#FFF'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = '#F0EFEB'; e.currentTarget.style.color = '#7A8B85'; }}
                         >
-                          {opt.label}
+                          {t('urge_' + opt.id)}
                         </button>
                       ))}
                     </div>
@@ -302,7 +330,7 @@ export default function Dashboard() {
         <StatsGrid t={t} stats={stats} loading={loading} />
 
         <div className="grid md:grid-cols-3 gap-4">
-          <QuickActions t={t} />
+          <QuickActions t={t} onLogSlip={() => setSlipDialogOpen(true)} />
           <div
             className="rounded-2xl p-6 shadow-sm flex flex-col justify-between"
             style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
@@ -357,6 +385,73 @@ export default function Dashboard() {
 
         <WeeklyChart t={t} weekly={stats?.weekly} />
       </div>
+
+      {/* Log a Slip dialog */}
+      {slipDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(42,58,53,0.4)' }}
+          onClick={() => setSlipDialogOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6 shadow-xl"
+            style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading text-xl font-medium" style={{ color: '#2A3A35' }}>
+                {t('log_a_slip')}
+              </h3>
+              <button onClick={() => setSlipDialogOpen(false)} style={{ color: '#A3B1AA' }}>
+                <X className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+            </div>
+            <p className="text-sm mb-4" style={{ color: '#7A8B85' }}>
+              {t('slip_dialog_desc')}
+            </p>
+            <div className="space-y-3">
+              <select
+                value={slipTrigger}
+                onChange={(e) => setSlipTrigger(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                style={{ border: '1px solid #E8E6E1', color: slipTrigger ? '#2A3A35' : '#A3B1AA', outline: 'none' }}
+              >
+                <option value="">{t('trigger_placeholder')}</option>
+                {['stress','boredom','loneliness','location','social','tiredness','habit_loop','other'].map((k) => (
+                  <option key={k} value={t(k)}>{t(k)}</option>
+                ))}
+              </select>
+              <select
+                value={slipEmotion}
+                onChange={(e) => setSlipEmotion(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                style={{ border: '1px solid #E8E6E1', color: slipEmotion ? '#2A3A35' : '#A3B1AA', outline: 'none' }}
+              >
+                <option value="">{t('emotion_placeholder')}</option>
+                {['anxious','sad','angry','frustrated','lonely','restless','numb','overwhelmed'].map((k) => (
+                  <option key={k} value={t(k)}>{t(k)}</option>
+                ))}
+              </select>
+              <textarea
+                value={slipNotes}
+                onChange={(e) => setSlipNotes(e.target.value)}
+                placeholder={t('any_notes')}
+                rows={2}
+                className="w-full px-3 py-2.5 rounded-xl text-sm resize-none"
+                style={{ border: '1px solid #E8E6E1', color: '#2A3A35', outline: 'none' }}
+              />
+            </div>
+            <button
+              onClick={handleLogSlip}
+              disabled={slipSaving}
+              className="mt-4 w-full py-3 rounded-full text-white text-sm font-medium transition-opacity"
+              style={{ background: '#E5989B', opacity: slipSaving ? 0.7 : 1 }}
+            >
+              {slipSaving ? t('saving') : t('log_slip_confirm')}
+            </button>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

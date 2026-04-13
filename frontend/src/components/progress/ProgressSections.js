@@ -1,6 +1,6 @@
 import React from 'react';
 import { Target, Clock, ArrowUp, ArrowDown } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, LabelList } from 'recharts';
 
 const formatHour = (h) => {
   if (h === 0) return '12am';
@@ -53,17 +53,44 @@ export function PeakTimes({ t, triggerStats }) {
         </div>
       )}
       {triggerStats?.hours && triggerStats.hours.length > 0 ? (
-        <ResponsiveContainer width="100%" height={150}>
-          <BarChart data={triggerStats.hours}>
-            <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#A3B1AA' }} tickFormatter={formatHour} axisLine={false} tickLine={false} />
-            <Tooltip content={({ active, payload }) => active && payload?.length ? (
-              <div className="rounded-lg p-2 shadow" style={{ background: '#FFF', border: '1px solid #E8E6E1' }}>
-                <p className="text-xs" style={{ color: '#2A3A35' }}>{formatHour(payload[0]?.payload?.hour)}: {payload[0]?.value}</p>
-              </div>
-            ) : null} />
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={triggerStats.hours} margin={{ top: 16, right: 4, left: -20, bottom: 0 }}>
+            <XAxis
+              dataKey="hour"
+              tick={{ fontSize: 10, fill: '#A3B1AA' }}
+              tickFormatter={formatHour}
+              axisLine={false}
+              tickLine={false}
+              interval={2}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: '#A3B1AA' }}
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip
+              content={({ active, payload }) =>
+                active && payload?.length ? (
+                  <div className="rounded-lg p-2 shadow" style={{ background: '#FFF', border: '1px solid #E8E6E1' }}>
+                    <p className="text-xs font-medium" style={{ color: '#2A3A35' }}>{formatHour(payload[0]?.payload?.hour)}</p>
+                    <p className="text-xs" style={{ color: '#7A8B85' }}>{payload[0]?.value} {payload[0]?.value === 1 ? 'urge' : 'urges'}</p>
+                  </div>
+                ) : null
+              }
+            />
             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+              <LabelList
+                dataKey="count"
+                position="top"
+                style={{ fontSize: 9, fill: '#A3B1AA' }}
+                formatter={(v) => (v > 0 ? v : '')}
+              />
               {triggerStats.hours.map((entry) => (
-                <Cell key={`hour-${entry.hour}`} fill={entry.hour === triggerStats.peak_hour ? '#E5989B' : '#A4C3B2'} />
+                <Cell
+                  key={`hour-${entry.hour}`}
+                  fill={entry.hour === triggerStats.peak_hour ? '#E5989B' : '#A4C3B2'}
+                />
               ))}
             </Bar>
           </BarChart>
@@ -81,29 +108,50 @@ export function RecentUrges({ t, urges }) {
       <h3 className="font-heading text-lg font-medium mb-4" style={{ color: '#2A3A35' }}>{t('recent_urges')}</h3>
       {urges.length > 0 ? (
         <div className="space-y-3">
-          {urges.slice(0, 10).map((u) => (
-            <div key={u.urge_id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{
-                  background: u.outcome === 'resisted' ? '#6B908033' : u.outcome === 'relapsed' ? '#E5989B33' : '#E2D4C844'
+          {urges.slice(0, 10).map((u) => {
+            const urgeTypeLabel = u.urge_type
+              ? u.urge_type === 'other' && u.custom_urge_type
+                ? u.custom_urge_type
+                : t('urge_' + u.urge_type) || u.urge_type
+              : null;
+            return (
+              <div key={u.urge_id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{
+                    background: u.outcome === 'resisted' ? '#6B908033' : u.outcome === 'relapsed' ? '#E5989B33' : '#E2D4C844'
+                  }}>
+                    {u.outcome === 'resisted' ? <ArrowUp className="w-4 h-4" style={{ color: '#6B9080' }} strokeWidth={1.5} /> :
+                     u.outcome === 'relapsed' ? <ArrowDown className="w-4 h-4" style={{ color: '#E5989B' }} strokeWidth={1.5} /> :
+                     <Clock className="w-4 h-4" style={{ color: '#7A8B85' }} strokeWidth={1.5} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>
+                        {u.trigger || t('no_trigger')} · {u.emotion || t('no_emotion')}
+                      </p>
+                      {urgeTypeLabel && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: '#6B908015', color: '#6B9080' }}
+                        >
+                          {urgeTypeLabel}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: '#A3B1AA' }}>
+                      {new Date(u.created_at).toLocaleDateString()} at {new Date(u.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs px-3 py-1 rounded-full font-medium shrink-0" style={{
+                  background: u.outcome === 'resisted' ? '#6B908022' : u.outcome === 'relapsed' ? '#E5989B22' : '#E2D4C844',
+                  color: u.outcome === 'resisted' ? '#6B9080' : u.outcome === 'relapsed' ? '#E5989B' : '#7A8B85'
                 }}>
-                  {u.outcome === 'resisted' ? <ArrowUp className="w-4 h-4" style={{ color: '#6B9080' }} strokeWidth={1.5} /> :
-                   u.outcome === 'relapsed' ? <ArrowDown className="w-4 h-4" style={{ color: '#E5989B' }} strokeWidth={1.5} /> :
-                   <Clock className="w-4 h-4" style={{ color: '#7A8B85' }} strokeWidth={1.5} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>{u.trigger || t('no_trigger')} - {u.emotion || t('no_emotion')}</p>
-                  <p className="text-xs" style={{ color: '#A3B1AA' }}>{new Date(u.created_at).toLocaleDateString()} at {new Date(u.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
+                  {u.outcome === 'resisted' ? t('resisted') : u.outcome === 'relapsed' ? t('i_slipped') : t('in_progress_label')}
+                </span>
               </div>
-              <span className="text-xs px-3 py-1 rounded-full font-medium" style={{
-                background: u.outcome === 'resisted' ? '#6B908022' : u.outcome === 'relapsed' ? '#E5989B22' : '#E2D4C844',
-                color: u.outcome === 'resisted' ? '#6B9080' : u.outcome === 'relapsed' ? '#E5989B' : '#7A8B85'
-              }}>
-                {u.outcome === 'resisted' ? t('resisted') : u.outcome === 'relapsed' ? t('i_slipped') : t('in_progress_label')}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="text-sm text-center py-8" style={{ color: '#A3B1AA' }}>{t('no_urges_yet')}</p>

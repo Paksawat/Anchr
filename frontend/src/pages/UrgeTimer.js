@@ -70,6 +70,7 @@ function SetupPhase({
   setUrgeType,
   customUrgeType,
   setCustomUrgeType,
+  savedCustomUrge,
   onStart,
 }) {
   const TRIGGERS_KEYS = [
@@ -126,19 +127,43 @@ function SetupPhase({
           {t('urge_type_label')}
         </h3>
         <div className="flex flex-wrap gap-2 mb-2">
-          {PRESET_URGE_TYPES.map((opt) => (
+          {PRESET_URGE_TYPES.filter((o) => o.id !== 'other').map((opt) => (
             <button
               key={opt.id}
-              onClick={() => { setUrgeType(opt.id); if (opt.id !== 'other') setCustomUrgeType(''); }}
+              onClick={() => { setUrgeType(opt.id); setCustomUrgeType(''); }}
               className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
               style={{
                 background: urgeType === opt.id ? '#6B9080' : '#F0EFEB',
                 color: urgeType === opt.id ? '#FFFFFF' : '#7A8B85',
               }}
             >
-              {opt.label}
+              {t('urge_' + opt.id)}
             </button>
           ))}
+          {/* Saved user custom urge as its own pill */}
+          {savedCustomUrge && (
+            <button
+              onClick={() => { setUrgeType('other'); setCustomUrgeType(savedCustomUrge); }}
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+              style={{
+                background: urgeType === 'other' && customUrgeType === savedCustomUrge ? '#6B9080' : '#E2D4C8',
+                color: urgeType === 'other' && customUrgeType === savedCustomUrge ? '#FFFFFF' : '#7A8B85',
+              }}
+            >
+              {savedCustomUrge}
+            </button>
+          )}
+          {/* Add / type a new custom one */}
+          <button
+            onClick={() => { setUrgeType('other'); setCustomUrgeType(''); }}
+            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+            style={{
+              background: urgeType === 'other' && !customUrgeType ? '#6B9080' : '#F0EFEB',
+              color: urgeType === 'other' && !customUrgeType ? '#FFFFFF' : '#A3B1AA',
+            }}
+          >
+            + {t('urge_other')}
+          </button>
         </div>
         {urgeType === 'other' && (
           <input
@@ -602,6 +627,7 @@ export default function UrgeTimer() {
               setUrgeType={setUrgeType}
               customUrgeType={customUrgeType}
               setCustomUrgeType={setCustomUrgeType}
+              savedCustomUrge={user?.custom_urge_type || ''}
               onStart={startUrge}
             />
           )}
