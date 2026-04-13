@@ -20,9 +20,17 @@ export default function AuthPage() {
   const [consentChecked, setConsentChecked] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const { setUser } = useAuth();
+  const { setUser, user, loading: authLoading } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const navigate = useNavigate();
+
+  // Redirect already-authenticated users, and handle post-login/register navigation
+  // data-driven: new users (no urge_type) → onboarding, returning users → dashboard
+  React.useEffect(() => {
+    if (!authLoading && user) {
+      navigate(user.urge_type ? '/dashboard' : '/onboarding', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,7 +48,7 @@ export default function AuthPage() {
         withCredentials: true,
       });
       setUser(res.data);
-      navigate(isLogin ? '/dashboard' : '/onboarding');
+      // navigation is handled by the useEffect watching user + urge_type
     } catch (err) {
       setError(err.response?.data?.detail || 'Something went wrong');
     } finally {
