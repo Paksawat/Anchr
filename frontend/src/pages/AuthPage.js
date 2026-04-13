@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Anchor, Mail, Lock, User, ArrowRight, Globe } from 'lucide-react';
+import { Anchor, Mail, Lock, User, ArrowRight, Globe, ChevronDown, ChevronUp } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
 
@@ -17,6 +17,8 @@ export default function AuthPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const { setUser } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const navigate = useNavigate();
@@ -25,6 +27,11 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    if (!isLogin && !consentChecked) {
+      setError(t('consent_required'));
+      setLoading(false);
+      return;
+    }
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const payload = isLogin ? { email, password } : { email, password, name };
@@ -61,7 +68,7 @@ export default function AuthPage() {
             style={{ background: '#F0EFEB', color: '#7A8B85' }}
           >
             <Globe className="w-3.5 h-3.5" strokeWidth={1.5} />
-            {lang === 'en' ? 'Dansk' : 'English'}
+            {lang === 'en' ? 'English' : 'Dansk'}
           </button>
         </div>
 
@@ -224,12 +231,46 @@ export default function AuthPage() {
                 />
               </div>
             </div>
+            {!isLogin && (
+              <div className="space-y-3">
+                {/* Privacy Policy expandable */}
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E8E6E1' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPrivacyOpen(!privacyOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors"
+                    style={{ background: '#F9F8F6', color: '#6B9080' }}
+                  >
+                    <span>{t('privacy_policy')}</span>
+                    {privacyOpen ? <ChevronUp className="w-4 h-4" strokeWidth={1.5} /> : <ChevronDown className="w-4 h-4" strokeWidth={1.5} />}
+                  </button>
+                  {privacyOpen && (
+                    <div className="px-4 py-3 text-xs leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto" style={{ color: '#7A8B85', background: '#FFFFFF', borderTop: '1px solid #E8E6E1' }}>
+                      {t('privacy_policy_content')}
+                    </div>
+                  )}
+                </div>
+                {/* Consent checkbox */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentChecked}
+                    onChange={(e) => setConsentChecked(e.target.checked)}
+                    className="mt-0.5 shrink-0 w-4 h-4 rounded accent-green-700"
+                    style={{ accentColor: '#6B9080' }}
+                  />
+                  <span className="text-xs leading-relaxed" style={{ color: '#7A8B85' }}>
+                    {t('consent_text')}
+                  </span>
+                </label>
+              </div>
+            )}
             <Button
               data-testid="auth-submit-btn"
               type="submit"
-              disabled={loading}
+              disabled={loading || (!isLogin && !consentChecked)}
               className="w-full h-12 rounded-full text-white font-medium transition-colors duration-300 flex items-center justify-center gap-2"
-              style={{ background: '#6B9080' }}
+              style={{ background: (!isLogin && !consentChecked) ? '#A3B1AA' : '#6B9080' }}
             >
               {loading
                 ? t('please_wait')

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -492,6 +493,67 @@ async def alert_buddy(buddy_id: str, user: dict = Depends(get_current_user)):
     # TODO: Send actual notification (email/SMS) in future
     await db.buddy_alerts.insert_one({"user_id": user["user_id"], "buddy_id": buddy_id, "buddy_name": buddy["name"], "created_at": datetime.now(timezone.utc).isoformat()})
     return {"message": f"Alert sent to {buddy['name']}", "note": "Notification delivery coming soon"}
+
+# ─── Data & Privacy Routes ───
+
+@api_router.get("/export")
+async def export_data(user: dict = Depends(get_current_user)):
+    uid = user["user_id"]
+    urges = await db.urges.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    relapses = await db.relapses.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    motivations = await db.motivations.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    habits = await db.user_habits.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    completions = await db.habit_completions.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    reminders = await db.reminders.find_one({"user_id": uid}, {"_id": 0})
+    enrollments = await db.program_enrollments.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    buddies = await db.buddies.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    profile = {k: v for k, v in user.items() if k not in ("password_hash",)}
+    export = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "profile": profile,
+        "urges": urges,
+        "relapses": relapses,
+        "motivations": motivations,
+        "habits": habits,
+        "habit_completions": completions,
+        "reminders": reminders,
+        "program_enrollments": enrollments,
+        "buddies": buddies,
+    }
+    return JSONResponse(content=export, headers={"Content-Disposition": "attachment; filename=anchr_data.json"})
+
+@api_router.delete("/data")
+async def delete_user_data(user: dict = Depends(get_current_user), response: Response = None):
+    uid = user["user_id"]
+    await db.urges.delete_many({"user_id": uid})
+    await db.relapses.delete_many({"user_id": uid})
+    await db.motivations.delete_many({"user_id": uid})
+    await db.user_habits.delete_many({"user_id": uid})
+    await db.habit_completions.delete_many({"user_id": uid})
+    await db.reminders.delete_many({"user_id": uid})
+    await db.program_enrollments.delete_many({"user_id": uid})
+    await db.buddies.delete_many({"user_id": uid})
+    await db.buddy_alerts.delete_many({"user_id": uid})
+    # Reset streak-related fields on profile
+    await db.users.update_one({"user_id": uid}, {"$set": {"urge_type": None, "custom_urge_type": None}})
+    return {"message": "All data deleted. Account is still active."}
+
+@api_router.delete("/account")
+async def delete_account(request: Request, user: dict = Depends(get_current_user)):
+    uid = user["user_id"]
+    # Delete all user data
+    await db.urges.delete_many({"user_id": uid})
+    await db.relapses.delete_many({"user_id": uid})
+    await db.motivations.delete_many({"user_id": uid})
+    await db.user_habits.delete_many({"user_id": uid})
+    await db.habit_completions.delete_many({"user_id": uid})
+    await db.reminders.delete_many({"user_id": uid})
+    await db.program_enrollments.delete_many({"user_id": uid})
+    await db.buddies.delete_many({"user_id": uid})
+    await db.buddy_alerts.delete_many({"user_id": uid})
+    await db.user_sessions.delete_many({"user_id": uid})
+    await db.users.delete_one({"user_id": uid})
+    return {"message": "Account and all data deleted."}
 
 # ─── App Setup ───
 

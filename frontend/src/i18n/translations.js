@@ -246,6 +246,53 @@ const translations = {
     fri: 'Fri',
     sat: 'Sat',
     sun: 'Sun',
+
+    // Privacy & GDPR
+    consent_text: 'I agree that Anchr stores my personal data, including habits, urges, and emotional information, to provide the service.',
+    consent_required: 'You must agree to the data storage policy to create an account.',
+    privacy_policy: 'Privacy Policy',
+    open_privacy_policy: 'Read our Privacy Policy',
+    data_privacy: 'Data & Privacy',
+    export_data: 'Export My Data',
+    export_data_desc: 'Download all your data as a JSON file',
+    delete_data: 'Delete My Data',
+    delete_data_desc: 'Delete all your tracked data (urges, habits, etc.) but keep your account',
+    delete_account: 'Delete My Account',
+    delete_account_desc: 'Permanently delete your account and all associated data. This cannot be undone.',
+    confirm_delete_data: 'This will permanently delete all your tracked data including urges, relapses, habits, and motivations. Your account will remain active. This cannot be undone.',
+    confirm_delete_account: 'This will permanently delete your account and all your data. You will be logged out and cannot undo this.',
+    type_delete_to_confirm: 'Type DELETE to confirm',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    exporting: 'Exporting...',
+    privacy_policy_content: `Last updated: April 2026
+
+Anchr ("we", "our", "us") is committed to protecting your privacy. This policy explains what data we collect and how we use it.
+
+Data we collect:
+• Account information: name, email address
+• Recovery data: urges, triggers, emotions, intensity levels, outcomes
+• Habit and program tracking
+• Personal motivations and notes
+• Usage timestamps
+
+How we use your data:
+• To provide the Anchr service and display your progress
+• To calculate streaks and statistics
+• We never sell your data to third parties
+• We never use your data for advertising
+
+Your rights (GDPR):
+• Right to access: export all your data as JSON at any time
+• Right to erasure: delete your data or account at any time
+• Right to rectification: update your information in Settings
+
+Data storage:
+Your data is stored securely. Sessions are encrypted and expire after 7 days.
+
+Contact:
+For privacy questions, contact us through the app.`,
   },
 
   da: {
@@ -495,6 +542,53 @@ const translations = {
     fri: 'Fre',
     sat: 'Lør',
     sun: 'Søn',
+
+    // Privacy & GDPR
+    consent_text: 'Jeg accepterer, at Anchr gemmer mine personlige data, herunder vaner, trang og følelsesmæssige oplysninger, for at levere tjenesten.',
+    consent_required: 'Du skal acceptere datapolitikken for at oprette en konto.',
+    privacy_policy: 'Privatlivspolitik',
+    open_privacy_policy: 'Læs vores Privatlivspolitik',
+    data_privacy: 'Data & Privatliv',
+    export_data: 'Eksportér mine data',
+    export_data_desc: 'Download alle dine data som en JSON-fil',
+    delete_data: 'Slet mine data',
+    delete_data_desc: 'Slet alle dine registrerede data (trang, vaner osv.), men behold din konto',
+    delete_account: 'Slet min konto',
+    delete_account_desc: 'Slet permanent din konto og alle tilknyttede data. Dette kan ikke fortrydes.',
+    confirm_delete_data: 'Dette vil permanent slette alle dine registrerede data, herunder trang, fald, vaner og motivationer. Din konto forbliver aktiv. Dette kan ikke fortrydes.',
+    confirm_delete_account: 'Dette vil permanent slette din konto og alle dine data. Du vil blive logget ud og kan ikke fortryde dette.',
+    type_delete_to_confirm: 'Skriv SLET for at bekræfte',
+    cancel: 'Annuller',
+    delete: 'Slet',
+    deleting: 'Sletter...',
+    exporting: 'Eksporterer...',
+    privacy_policy_content: `Sidst opdateret: April 2026
+
+Anchr ("vi", "os") er forpligtet til at beskytte dit privatliv. Denne politik forklarer, hvilke data vi indsamler og hvordan vi bruger dem.
+
+Data vi indsamler:
+• Kontooplysninger: navn, e-mailadresse
+• Genopretningsdata: trang, udløsere, følelser, intensitetsniveauer, resultater
+• Vane- og programsporing
+• Personlige motivationer og noter
+• Tidsstempler for brug
+
+Sådan bruger vi dine data:
+• For at levere Anchr-tjenesten og vise dine fremskridt
+• For at beregne streaks og statistikker
+• Vi sælger aldrig dine data til tredjeparter
+• Vi bruger aldrig dine data til reklame
+
+Dine rettigheder (GDPR):
+• Ret til indsigt: eksportér alle dine data som JSON til enhver tid
+• Ret til sletning: slet dine data eller konto til enhver tid
+• Ret til berigtigelse: opdatér dine oplysninger i Indstillinger
+
+Datalagring:
+Dine data opbevares sikkert. Sessioner er krypterede og udløber efter 7 dage.
+
+Kontakt:
+For spørgsmål om privatliv, kontakt os via appen.`,
   }
 };
 

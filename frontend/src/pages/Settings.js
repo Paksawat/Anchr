@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import UpgradePrompt from '../components/UpgradePrompt';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +14,9 @@ import {
   Users,
   AlertCircle,
   Shield,
+  Download,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -68,6 +72,7 @@ const EMOTION_KEYS = [
 export default function Settings() {
   const { user, setUser } = useAuth();
   const { t, lang, setLang } = useLanguage();
+  const navigate = useNavigate();
   const [reminders, setReminders] = useState({
     enabled: true,
     times: ['09:00', '21:00'],
@@ -93,6 +98,12 @@ export default function Settings() {
   const [buddyEmail, setBuddyEmail] = useState('');
   const [buddyPhone, setBuddyPhone] = useState('');
   const [buddyRelation, setBuddyRelation] = useState('');
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
+  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
@@ -236,6 +247,49 @@ export default function Settings() {
       setBuddies(buddies.filter((b) => b.buddy_id !== buddyId));
     } catch (error) {
       console.error('Failed to delete buddy:', error);
+    }
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const res = await axios.get(`${API}/export`, { withCredentials: true, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'anchr_data.json';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export data:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteData = async () => {
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/data`, { withCredentials: true });
+      setDeleteDataDialogOpen(false);
+      setDeleteConfirmText('');
+      setRelapses([]);
+    } catch (error) {
+      console.error('Failed to delete data:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/account`, { withCredentials: true });
+      setUser(null);
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to delete account:', error);
+      setDeleting(false);
     }
   };
 
@@ -870,6 +924,138 @@ export default function Settings() {
             </p>
           )}
         </div>
+
+        {/* Data & Privacy */}
+        <div className="rounded-2xl p-6 shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Shield className="w-5 h-5" style={{ color: '#6B9080' }} strokeWidth={1.5} />
+            <h2 className="font-heading text-xl font-medium" style={{ color: '#2A3A35' }}>{t('data_privacy')}</h2>
+          </div>
+
+          {/* Privacy policy expandable */}
+          <div className="rounded-xl overflow-hidden mb-4" style={{ border: '1px solid #E8E6E1' }}>
+            <button
+              type="button"
+              onClick={() => setPrivacyOpen(!privacyOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
+              style={{ background: '#F9F8F6', color: '#6B9080' }}
+            >
+              <span>{t('privacy_policy')}</span>
+              {privacyOpen ? <ChevronUp className="w-4 h-4" strokeWidth={1.5} /> : <ChevronDown className="w-4 h-4" strokeWidth={1.5} />}
+            </button>
+            {privacyOpen && (
+              <div className="px-4 py-3 text-xs leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto" style={{ color: '#7A8B85', background: '#FFFFFF', borderTop: '1px solid #E8E6E1' }}>
+                {t('privacy_policy_content')}
+              </div>
+            )}
+          </div>
+
+          {/* Export */}
+          <div className="flex items-start justify-between gap-4 py-4" style={{ borderBottom: '1px solid #F0EFEB' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>{t('export_data')}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#A3B1AA' }}>{t('export_data_desc')}</p>
+            </div>
+            <Button
+              onClick={handleExportData}
+              disabled={exporting}
+              className="shrink-0 rounded-full text-sm h-9 px-4 flex items-center gap-2"
+              style={{ background: '#6B9080', color: '#fff' }}
+            >
+              <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+              {exporting ? t('exporting') : t('export_data')}
+            </Button>
+          </div>
+
+          {/* Delete data */}
+          <div className="flex items-start justify-between gap-4 py-4" style={{ borderBottom: '1px solid #F0EFEB' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>{t('delete_data')}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#A3B1AA' }}>{t('delete_data_desc')}</p>
+            </div>
+            <Dialog open={deleteDataDialogOpen} onOpenChange={(o) => { setDeleteDataDialogOpen(o); if (!o) setDeleteConfirmText(''); }}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="shrink-0 rounded-full text-sm h-9 px-4"
+                  style={{ border: '1px solid #E5989B', color: '#E5989B' }}
+                >
+                  {t('delete_data')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle style={{ color: '#2A3A35' }}>{t('delete_data')}</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm mt-2" style={{ color: '#7A8B85' }}>{t('confirm_delete_data')}</p>
+                <p className="text-xs mt-3 font-medium" style={{ color: '#7A8B85' }}>{t('type_delete_to_confirm')}</p>
+                <input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl text-sm"
+                  style={{ border: '1px solid #E8E6E1', background: '#F9F8F6', color: '#2A3A35' }}
+                  placeholder={lang === 'en' ? 'DELETE' : 'SLET'}
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button variant="outline" className="flex-1 rounded-full" onClick={() => { setDeleteDataDialogOpen(false); setDeleteConfirmText(''); }}>{t('cancel')}</Button>
+                  <Button
+                    className="flex-1 rounded-full text-white"
+                    style={{ background: (deleteConfirmText === 'DELETE' || deleteConfirmText === 'SLET') ? '#E5989B' : '#A3B1AA' }}
+                    disabled={deleting || (deleteConfirmText !== 'DELETE' && deleteConfirmText !== 'SLET')}
+                    onClick={handleDeleteData}
+                  >
+                    {deleting ? t('deleting') : t('delete')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Delete account */}
+          <div className="flex items-start justify-between gap-4 pt-4">
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#E5989B' }}>{t('delete_account')}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#A3B1AA' }}>{t('delete_account_desc')}</p>
+            </div>
+            <Dialog open={deleteAccountDialogOpen} onOpenChange={(o) => { setDeleteAccountDialogOpen(o); if (!o) setDeleteConfirmText(''); }}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="shrink-0 rounded-full text-sm h-9 px-4"
+                  style={{ border: '1px solid #E5989B', color: '#E5989B' }}
+                >
+                  {t('delete_account')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle style={{ color: '#E5989B' }}>{t('delete_account')}</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm mt-2" style={{ color: '#7A8B85' }}>{t('confirm_delete_account')}</p>
+                <p className="text-xs mt-3 font-medium" style={{ color: '#7A8B85' }}>{t('type_delete_to_confirm')}</p>
+                <input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl text-sm"
+                  style={{ border: '1px solid #E8E6E1', background: '#F9F8F6', color: '#2A3A35' }}
+                  placeholder={lang === 'en' ? 'DELETE' : 'SLET'}
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button variant="outline" className="flex-1 rounded-full" onClick={() => { setDeleteAccountDialogOpen(false); setDeleteConfirmText(''); }}>{t('cancel')}</Button>
+                  <Button
+                    className="flex-1 rounded-full text-white"
+                    style={{ background: (deleteConfirmText === 'DELETE' || deleteConfirmText === 'SLET') ? '#E5989B' : '#A3B1AA' }}
+                    disabled={deleting || (deleteConfirmText !== 'DELETE' && deleteConfirmText !== 'SLET')}
+                    onClick={handleDeleteAccount}
+                  >
+                    {deleting ? t('deleting') : t('delete_account')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
       </div>
     </AppLayout>
   );
