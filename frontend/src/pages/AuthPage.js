@@ -28,7 +28,7 @@ export default function AuthPage() {
   // data-driven: new users (no urge_type) → onboarding, returning users → dashboard
   React.useEffect(() => {
     if (!authLoading && user) {
-      navigate(user.urge_type ? '/dashboard' : '/onboarding', { replace: true });
+      navigate(user.disclaimer_accepted === false ? '/onboarding' : '/dashboard', { replace: true });
     }
   }, [user, authLoading, navigate]);
 

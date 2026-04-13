@@ -70,6 +70,7 @@ class ProfileUpdate(BaseModel):
     urge_type: Optional[str] = None
     custom_urge_type: Optional[str] = None
     tier: Optional[str] = None
+    disclaimer_accepted: Optional[bool] = None
 
 class HabitCreate(BaseModel):
     name: str
@@ -161,13 +162,13 @@ async def register(data: UserRegister, request: Request, response: Response):
         raise HTTPException(status_code=400, detail="Email already registered")
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
-    user_doc = {"user_id": user_id, "email": data.email, "name": data.name, "password_hash": hash_password(data.password), "picture": None, "created_at": now, "auth_provider": "email", "urge_type": None, "custom_urge_type": None, "tier": "free"}
+    user_doc = {"user_id": user_id, "email": data.email, "name": data.name, "password_hash": hash_password(data.password), "picture": None, "created_at": now, "auth_provider": "email", "urge_type": None, "custom_urge_type": None, "tier": "free", "disclaimer_accepted": False}
     await db.users.insert_one(user_doc)
     token = create_session_token()
     await db.user_sessions.insert_one({"user_id": user_id, "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
     set_session_cookie(response, token)
     await log_audit(user_id, "register", request)
-    return {"user_id": user_id, "email": data.email, "name": data.name, "picture": None, "created_at": now, "urge_type": None, "custom_urge_type": None, "tier": "free"}
+    return {"user_id": user_id, "email": data.email, "name": data.name, "picture": None, "created_at": now, "urge_type": None, "custom_urge_type": None, "tier": "free", "disclaimer_accepted": False}
 
 @api_router.post("/auth/login")
 async def login(data: UserLogin, request: Request, response: Response):
@@ -183,7 +184,7 @@ async def login(data: UserLogin, request: Request, response: Response):
     await db.user_sessions.insert_one({"user_id": user["user_id"], "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
     set_session_cookie(response, token)
     await log_audit(user["user_id"], "login", request)
-    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free")}
+    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free"), "disclaimer_accepted": user.get("disclaimer_accepted", True)}
 
 @api_router.post("/auth/session")
 async def exchange_session(data: SessionExchange, request: Request, response: Response):
@@ -197,7 +198,7 @@ async def exchange_session(data: SessionExchange, request: Request, response: Re
     if not user:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc).isoformat()
-        user = {"user_id": user_id, "email": google_data["email"], "name": google_data.get("name", ""), "picture": google_data.get("picture"), "created_at": now, "auth_provider": "google", "urge_type": None, "custom_urge_type": None, "tier": "free"}
+        user = {"user_id": user_id, "email": google_data["email"], "name": google_data.get("name", ""), "picture": google_data.get("picture"), "created_at": now, "auth_provider": "google", "urge_type": None, "custom_urge_type": None, "tier": "free", "disclaimer_accepted": False}
         await db.users.insert_one(user)
     else:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"name": google_data.get("name", user["name"]), "picture": google_data.get("picture", user.get("picture"))}})
@@ -207,11 +208,11 @@ async def exchange_session(data: SessionExchange, request: Request, response: Re
     await db.user_sessions.insert_one({"user_id": user["user_id"], "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
     set_session_cookie(response, token)
     await log_audit(user["user_id"], "register_google" if is_new else "login_google", request)
-    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free")}
+    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free"), "disclaimer_accepted": user.get("disclaimer_accepted", True)}
 
 @api_router.get("/auth/me")
 async def get_me(user: dict = Depends(get_current_user)):
-    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free")}
+    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free"), "disclaimer_accepted": user.get("disclaimer_accepted", True)}
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
@@ -235,10 +236,12 @@ async def update_profile(data: ProfileUpdate, user: dict = Depends(get_current_u
         updates["custom_urge_type"] = data.custom_urge_type
     if data.tier is not None:
         updates["tier"] = data.tier
+    if data.disclaimer_accepted is not None:
+        updates["disclaimer_accepted"] = data.disclaimer_accepted
     if updates:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": updates})
     updated = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0})
-    return {"user_id": updated["user_id"], "email": updated["email"], "name": updated["name"], "picture": updated.get("picture"), "urge_type": updated.get("urge_type"), "custom_urge_type": updated.get("custom_urge_type"), "tier": updated.get("tier", "free")}
+    return {"user_id": updated["user_id"], "email": updated["email"], "name": updated["name"], "picture": updated.get("picture"), "urge_type": updated.get("urge_type"), "custom_urge_type": updated.get("custom_urge_type"), "tier": updated.get("tier", "free"), "disclaimer_accepted": updated.get("disclaimer_accepted", True)}
 
 @api_router.get("/urge-types")
 async def get_urge_types():

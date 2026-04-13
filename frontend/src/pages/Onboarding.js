@@ -48,6 +48,20 @@ export default function Onboarding() {
 
   const next = () => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
 
+  const acceptDisclaimer = async () => {
+    try {
+      const res = await axios.put(
+        `${API}/profile`,
+        { disclaimer_accepted: true },
+        { withCredentials: true },
+      );
+      setUser((prev) => ({ ...prev, ...res.data }));
+    } catch (error) {
+      console.error('Failed to save disclaimer acceptance:', error);
+    }
+    next();
+  };
+
   const handleFinish = async () => {
     if (!selected) {
       navigate('/dashboard');
@@ -234,7 +248,7 @@ export default function Onboarding() {
             </label>
 
             <Button
-              onClick={next}
+              onClick={acceptDisclaimer}
               disabled={!disclaimerAccepted}
               className="w-full h-12 rounded-full text-white font-medium"
               style={{ background: disclaimerAccepted ? '#6B9080' : '#A3B1AA' }}
