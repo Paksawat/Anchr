@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Anchor, Mail, Lock, User, ArrowRight, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Globe, ChevronDown, ChevronUp } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
 
@@ -18,6 +18,7 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const { setUser } = useAuth();
   const { t, lang, setLang } = useLanguage();
@@ -27,7 +28,7 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    if (!isLogin && !consentChecked) {
+    if (!isLogin && (!consentChecked || !privacyAccepted)) {
       setError(t('consent_required'));
       setLoading(false);
       return;
@@ -73,15 +74,8 @@ export default function AuthPage() {
         </div>
 
         <div className="text-center mb-10">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-5"
-            style={{ background: '#A4C3B2' }}
-          >
-            <Anchor
-              className="w-8 h-8"
-              style={{ color: '#2A3A35' }}
-              strokeWidth={1.5}
-            />
+          <div className="inline-flex items-center justify-center mb-5">
+            <img src="/anchr-circle-small.svg" alt="Anchr" className="w-16 h-16" />
           </div>
           <h1
             className="font-heading text-4xl sm:text-5xl font-light tracking-tight"
@@ -250,13 +244,26 @@ export default function AuthPage() {
                     </div>
                   )}
                 </div>
-                {/* Consent checkbox */}
+                {/* Privacy policy acceptance */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={privacyAccepted}
+                    onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                    className="mt-0.5 shrink-0 w-4 h-4"
+                    style={{ accentColor: '#6B9080' }}
+                  />
+                  <span className="text-xs leading-relaxed" style={{ color: '#7A8B85' }}>
+                    {t('privacy_accept_text')}
+                  </span>
+                </label>
+                {/* Data consent checkbox */}
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={consentChecked}
                     onChange={(e) => setConsentChecked(e.target.checked)}
-                    className="mt-0.5 shrink-0 w-4 h-4 rounded accent-green-700"
+                    className="mt-0.5 shrink-0 w-4 h-4"
                     style={{ accentColor: '#6B9080' }}
                   />
                   <span className="text-xs leading-relaxed" style={{ color: '#7A8B85' }}>
@@ -268,9 +275,9 @@ export default function AuthPage() {
             <Button
               data-testid="auth-submit-btn"
               type="submit"
-              disabled={loading || (!isLogin && !consentChecked)}
+              disabled={loading || (!isLogin && (!consentChecked || !privacyAccepted))}
               className="w-full h-12 rounded-full text-white font-medium transition-colors duration-300 flex items-center justify-center gap-2"
-              style={{ background: (!isLogin && !consentChecked) ? '#A3B1AA' : '#6B9080' }}
+              style={{ background: (!isLogin && (!consentChecked || !privacyAccepted)) ? '#A3B1AA' : '#6B9080' }}
             >
               {loading
                 ? t('please_wait')

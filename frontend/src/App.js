@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { UrgeTimerProvider } from './contexts/UrgeTimerContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
@@ -44,7 +45,9 @@ function App() {
     <BrowserRouter>
       <LanguageProvider>
         <AuthProvider>
-          <AppRouter />
+          <UrgeTimerProvider>
+            <AppRouter />
+          </UrgeTimerProvider>
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

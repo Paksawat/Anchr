@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useUrgeTimer } from '../contexts/UrgeTimerContext';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Check, ChevronDown } from 'lucide-react';
@@ -476,134 +477,57 @@ export default function UrgeTimer() {
   const location = useLocation();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const {
+    phase,
+    timerDuration, setTimerDuration,
+    timeLeft, setTimeLeft,
+    isRunning, togglePause,
+    trigger, setTrigger,
+    emotion, setEmotion,
+    notes, setNotes,
+    intensity, setIntensity,
+    urgeType, setUrgeType,
+    customUrgeType, setCustomUrgeType,
+    activeTab, setActiveTab,
+    startUrge,
+    handleOutcome,
+  } = useUrgeTimer();
+
   const initialTab = location.state?.tab || 'timer';
 
-  const [phase, setPhase] = useState('setup');
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const [timerDuration, setTimerDuration] = useState(300);
-  const [timeLeft, setTimeLeft] = useState(300);
-  const [isRunning, setIsRunning] = useState(false);
-  const [trigger, setTrigger] = useState('');
-  const [emotion, setEmotion] = useState('');
-  const [notes, setNotes] = useState('');
-  const [intensity, setIntensity] = useState(5);
-  const [urgeType, setUrgeType] = useState(user?.urge_type || '');
-  const [customUrgeType, setCustomUrgeType] = useState(user?.custom_urge_type || '');
-  const [currentUrgeId, setCurrentUrgeId] = useState(null);
+  // Initialize urge type from user profile when in setup phase
+  useEffect(() => {
+    if (phase === 'setup' && !urgeType && user?.urge_type) {
+      setUrgeType(user.urge_type);
+      if (user.custom_urge_type) setCustomUrgeType(user.custom_urge_type);
+    }
+    if (initialTab !== 'timer') setActiveTab(initialTab);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [encouragement, setEncouragement] = useState(t('encouragement_1'));
   const [motivations, setMotivations] = useState([]);
-  const intervalRef = useRef(null);
 
   const ENCOURAGEMENT_KEYS = [
-    'encouragement_1',
-    'encouragement_2',
-    'encouragement_3',
-    'encouragement_4',
-    'encouragement_5',
-    'encouragement_6',
+    'encouragement_1', 'encouragement_2', 'encouragement_3',
+    'encouragement_4', 'encouragement_5', 'encouragement_6',
   ];
 
   useEffect(() => {
-    axios
-      .get(`${API}/motivations`, { withCredentials: true })
+    axios.get(`${API}/motivations`, { withCredentials: true })
       .then((res) => setMotivations(res.data))
-      .catch((error) => {
-        console.error('Failed to load motivations:', error);
-      });
+      .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(intervalRef.current);
-    }
-    if (timeLeft === 0 && isRunning) {
-      setIsRunning(false);
-      setPhase('complete');
-    }
-  }, [isRunning, timeLeft]);
 
   useEffect(() => {
     if (!isRunning) return;
     const msgInterval = setInterval(() => {
-      const key =
-        ENCOURAGEMENT_KEYS[
-          Math.floor(Math.random() * ENCOURAGEMENT_KEYS.length)
-        ];
+      const key = ENCOURAGEMENT_KEYS[Math.floor(Math.random() * ENCOURAGEMENT_KEYS.length)];
       setEncouragement(t(key));
     }, 8000);
     return () => clearInterval(msgInterval);
   }, [isRunning, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startUrge = useCallback(async () => {
-    try {
-      const res = await axios.post(
-        `${API}/urges`,
-        {
-          trigger: trigger || null,
-          emotion: emotion || null,
-          notes: notes || null,
-          intensity,
-          urge_type: urgeType || null,
-          custom_urge_type: urgeType === 'other' ? (customUrgeType || null) : null,
-        },
-        { withCredentials: true },
-      );
-      setCurrentUrgeId(res.data.urge_id);
-      setTimeLeft(timerDuration);
-      setIsRunning(true);
-      setPhase('active');
-    } catch (error) {
-      console.error('Failed to create urge:', error);
-    }
-  }, [trigger, emotion, notes, intensity, urgeType, customUrgeType, timerDuration]);
-
-  const handleOutcome = useCallback(
-    async (outcome) => {
-      if (currentUrgeId) {
-        try {
-          await axios.put(
-            `${API}/urges/${currentUrgeId}`,
-            {
-              outcome,
-              duration_seconds: timerDuration - timeLeft,
-              coping_used: activeTab,
-            },
-            { withCredentials: true },
-          );
-        } catch (error) {
-          console.error('Failed to update urge:', error);
-        }
-      }
-      if (outcome === 'relapsed') {
-        try {
-          await axios.post(
-            `${API}/relapses`,
-            {
-              trigger: trigger || null,
-              emotion: emotion || null,
-              notes: 'Logged from urge timer',
-            },
-            { withCredentials: true },
-          );
-        } catch (error) {
-          console.error('Failed to log relapse:', error);
-        }
-      }
-      setPhase('setup');
-      setIsRunning(false);
-      setTimeLeft(timerDuration);
-      setCurrentUrgeId(null);
-      setTrigger('');
-      setEmotion('');
-      setNotes('');
-      setUrgeType(user?.urge_type || '');
-      setCustomUrgeType(user?.custom_urge_type || '');
-    },
-    [currentUrgeId, timerDuration, timeLeft, activeTab, trigger, emotion, user],
-  );
+  const onOutcome = (outcome) => handleOutcome(outcome, user);
 
   return (
     <AppLayout>
@@ -641,12 +565,12 @@ export default function UrgeTimer() {
               motivations={motivations}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
-              onTogglePause={() => setIsRunning((prev) => !prev)}
-              onOutcome={handleOutcome}
+              onTogglePause={togglePause}
+              onOutcome={onOutcome}
             />
           )}
           {phase === 'complete' && (
-            <CompletePhase t={t} onOutcome={handleOutcome} />
+            <CompletePhase t={t} onOutcome={onOutcome} />
           )}
         </AnimatePresence>
       </div>

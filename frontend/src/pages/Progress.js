@@ -11,6 +11,16 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog';
+import { Textarea } from '../components/ui/textarea';
+import { Button } from '../components/ui/button';
+import { RefreshCw } from 'lucide-react';
+import {
   AreaChart,
   Area,
   XAxis,
@@ -24,6 +34,9 @@ import {
   PeakTimes,
   RecentUrges,
 } from '../components/progress/ProgressSections';
+
+const TRIGGER_KEYS = ['stress', 'boredom', 'loneliness', 'location', 'social', 'tiredness', 'habit_loop', 'other'];
+const EMOTION_KEYS = ['anxious', 'sad', 'angry', 'frustrated', 'lonely', 'restless', 'numb', 'overwhelmed'];
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
 
@@ -66,7 +79,7 @@ function StatsCards({ t, stats }) {
 }
 
 function UrgeActivityChart({ t, stats, period, setPeriod }) {
-  const chartData = period === 'weekly' ? stats?.weekly : stats?.monthly;
+  const chartData = period === 'weekly' ? stats?.weekly : period === 'monthly' ? stats?.monthly : stats?.yearly;
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -123,6 +136,13 @@ function UrgeActivityChart({ t, stats, period, setPeriod }) {
             >
               {t('month')}
             </TabsTrigger>
+            <TabsTrigger
+              data-testid="tab-yearly"
+              value="yearly"
+              className="rounded-md px-3 py-1 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
+              {t('year')}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -145,7 +165,7 @@ function UrgeActivityChart({ t, stats, period, setPeriod }) {
               vertical={false}
             />
             <XAxis
-              dataKey={period === 'weekly' ? 'label' : 'date'}
+              dataKey={period === 'weekly' || period === 'yearly' ? 'label' : 'date'}
               tick={{ fontSize: 12, fill: '#A3B1AA' }}
               axisLine={false}
               tickLine={false}
@@ -202,24 +222,30 @@ export default function Progress() {
   const [stats, setStats] = useState(null);
   const [triggerStats, setTriggerStats] = useState(null);
   const [urges, setUrges] = useState([]);
+  const [relapses, setRelapses] = useState([]);
   const [period, setPeriod] = useState('weekly');
   const [loading, setLoading] = useState(true);
   const [urgeTypeFilter, setUrgeTypeFilter] = useState('all');
   const [availableUrgeTypes, setAvailableUrgeTypes] = useState([]);
+  const [relapseDialogOpen, setRelapseDialogOpen] = useState(false);
+  const [relapseTrigger, setRelapseTrigger] = useState('');
+  const [relapseEmotion, setRelapseEmotion] = useState('');
+  const [relapseNotes, setRelapseNotes] = useState('');
 
   const fetchData = useCallback(async (filter) => {
     try {
       const params = filter && filter !== 'all' ? { urge_type: filter } : {};
-      const [statsRes, triggersRes, urgesRes] = await Promise.all([
+      const [statsRes, triggersRes, urgesRes, relapsesRes] = await Promise.all([
         axios.get(`${API}/stats`, { params, withCredentials: true }),
         axios.get(`${API}/stats/triggers`, { params, withCredentials: true }),
         axios.get(`${API}/urges`, { withCredentials: true }),
+        axios.get(`${API}/relapses`, { withCredentials: true }),
       ]);
       setStats(statsRes.data);
       setTriggerStats(triggersRes.data);
       const allUrges = urgesRes.data;
       setUrges(allUrges);
-      // Derive which urge types this user has actually logged
+      setRelapses(relapsesRes.data);
       const types = [...new Set(allUrges.map((u) => u.urge_type).filter(Boolean))];
       setAvailableUrgeTypes(types);
     } catch (error) {
@@ -228,6 +254,25 @@ export default function Progress() {
       setLoading(false);
     }
   }, []);
+
+  const handleLogRelapse = async () => {
+    try {
+      const res = await axios.post(
+        `${API}/relapses`,
+        { trigger: relapseTrigger || null, emotion: relapseEmotion || null, notes: relapseNotes || null },
+        { withCredentials: true },
+      );
+      setRelapses([res.data, ...relapses]);
+      setRelapseDialogOpen(false);
+      setRelapseTrigger('');
+      setRelapseEmotion('');
+      setRelapseNotes('');
+      // Refresh stats since streak changed
+      fetchData(urgeTypeFilter);
+    } catch (error) {
+      console.error('Failed to log relapse:', error);
+    }
+  };
 
   useEffect(() => {
     fetchData(urgeTypeFilter);
@@ -307,6 +352,82 @@ export default function Progress() {
           t={t}
           urges={urgeTypeFilter === 'all' ? urges : urges.filter((u) => u.urge_type === urgeTypeFilter)}
         />
+
+        {/* Recovery Log */}
+        <div className="rounded-2xl p-6 shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="w-5 h-5" style={{ color: '#6B9080' }} strokeWidth={1.5} />
+              <h3 className="font-heading text-lg font-medium" style={{ color: '#2A3A35' }}>{t('recovery_log')}</h3>
+            </div>
+            <Dialog open={relapseDialogOpen} onOpenChange={setRelapseDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-full text-sm" style={{ border: '1px solid #E8E6E1', color: '#7A8B85' }}>
+                  {t('log_a_slip')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-2xl" style={{ border: '1px solid #E8E6E1' }}>
+                <DialogHeader>
+                  <DialogTitle className="font-heading text-xl" style={{ color: '#2A3A35' }}>{t('slip_title')}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <p className="text-sm" style={{ color: '#7A8B85' }}>{t('slip_desc')}</p>
+                  <Select value={relapseTrigger} onValueChange={setRelapseTrigger}>
+                    <SelectTrigger className="rounded-xl" style={{ border: '1px solid #E8E6E1' }}>
+                      <SelectValue placeholder={t('what_triggered')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRIGGER_KEYS.map((k) => <SelectItem key={k} value={k}>{t(k)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={relapseEmotion} onValueChange={setRelapseEmotion}>
+                    <SelectTrigger className="rounded-xl" style={{ border: '1px solid #E8E6E1' }}>
+                      <SelectValue placeholder={t('how_feeling')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EMOTION_KEYS.map((k) => <SelectItem key={k} value={k}>{t(k)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Textarea
+                    value={relapseNotes}
+                    onChange={(e) => setRelapseNotes(e.target.value)}
+                    placeholder={t('any_reflections')}
+                    className="rounded-xl resize-none"
+                    style={{ border: '1px solid #E8E6E1' }}
+                    rows={3}
+                  />
+                  <Button onClick={handleLogRelapse} className="w-full rounded-full text-white font-medium h-11" style={{ background: '#6B9080' }}>
+                    {t('log_reset_streak')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+          {relapses.length > 0 ? (
+            <div className="space-y-3">
+              {relapses.slice(0, 10).map((r) => (
+                <div key={r.relapse_id} className="p-3 rounded-xl" style={{ background: '#F9F8F6' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>
+                        {r.trigger ? (t(r.trigger) !== r.trigger ? t(r.trigger) : r.trigger) : t('unknown_trigger')}
+                        {' · '}
+                        {r.emotion ? (t(r.emotion) !== r.emotion ? t(r.emotion) : r.emotion) : t('unknown_emotion')}
+                      </p>
+                      {r.notes && <p className="text-xs mt-1" style={{ color: '#7A8B85' }}>{r.notes}</p>}
+                      <p className="text-xs mt-1" style={{ color: '#A3B1AA' }}>{new Date(r.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <span className="text-xs px-3 py-1 rounded-full shrink-0" style={{ background: '#E2D4C844', color: '#7A8B85' }}>
+                      {t('recovery_point')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: '#A3B1AA' }}>{t('no_slips')}</p>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

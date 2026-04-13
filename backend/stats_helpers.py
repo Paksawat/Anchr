@@ -36,6 +36,23 @@ def calculate_period_data(urges, now, days_back):
     return result
 
 
+def calculate_yearly_data(urges, now):
+    """Calculate urge data for the last 12 months, grouped by month."""
+    result = []
+    for i in range(11, -1, -1):
+        year = now.year
+        month = now.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        month_str = f"{year}-{month:02d}"
+        month_urges = [u for u in urges if u["created_at"][:7] == month_str]
+        month_resisted = len([u for u in month_urges if u.get("outcome") == "resisted"])
+        label = datetime(year, month, 1).strftime("%b")
+        result.append({"date": month_str, "label": label, "urges": len(month_urges), "resisted": month_resisted})
+    return result
+
+
 def calculate_best_streak(relapses, current_streak):
     """Calculate the best streak ever across all relapse gaps."""
     all_relapse_dates = sorted([r["created_at"] for r in relapses])

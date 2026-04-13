@@ -1,18 +1,28 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUrgeTimer } from '../contexts/UrgeTimerContext';
 import {
   LayoutDashboard, Flame, TrendingUp, Heart, Settings,
-  LogOut, Menu, X, Globe, BookOpen, ListChecks, Lock, Sparkles
+  LogOut, Menu, X, BookOpen, ListChecks, Lock, Sparkles
 } from 'lucide-react';
+
+const formatTime = (s) => {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+};
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
-  const { t, lang, setLang } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isPaid = user?.tier === 'paid';
+  const { phase, timeLeft } = useUrgeTimer();
+  const timerActive = phase === 'active' && location.pathname !== '/urge-timer';
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: t('nav_dashboard'), free: true },
@@ -79,16 +89,6 @@ export default function AppLayout({ children }) {
           </div>
         )}
 
-        <button
-          data-testid="lang-toggle"
-          onClick={() => setLang(lang === 'en' ? 'da' : 'en')}
-          className="flex items-center gap-2 px-4 py-2.5 w-full rounded-xl text-sm font-medium transition-all duration-200 mb-3"
-          style={{ background: '#F0EFEB', color: '#7A8B85' }}
-        >
-          <Globe className="w-4 h-4" strokeWidth={1.5} />
-          {lang === 'en' ? 'English' : 'Dansk'}
-        </button>
-
         <div className="pt-4 border-t" style={{ borderColor: '#E8E6E1' }}>
           <div className="flex items-center gap-3 px-3 mb-4">
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium" style={{ background: '#A4C3B2', color: '#2A3A35' }}>
@@ -120,9 +120,6 @@ export default function AppLayout({ children }) {
           <span className="font-heading text-lg font-medium" style={{ color: '#2A3A35' }}>Anchr</span>
         </NavLink>
         <div className="flex items-center gap-2">
-          <button data-testid="mobile-lang-toggle" onClick={() => setLang(lang === 'en' ? 'da' : 'en')} className="p-2 rounded-lg" style={{ color: '#7A8B85' }}>
-            <Globe className="w-5 h-5" strokeWidth={1.5} />
-          </button>
           <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-6 h-6" style={{ color: '#2A3A35' }} /> : <Menu className="w-6 h-6" style={{ color: '#2A3A35' }} />}
           </button>
@@ -156,6 +153,19 @@ export default function AppLayout({ children }) {
       <main className="flex-1 overflow-y-auto md:p-8 p-4 pt-20 md:pt-8">
         <div className="max-w-6xl mx-auto">{children}</div>
       </main>
+
+      {/* Floating mini timer — visible on all pages when a timer is running */}
+      {timerActive && (
+        <button
+          onClick={() => navigate('/urge-timer')}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3 rounded-full shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+          style={{ background: '#E5989B', color: '#fff' }}
+        >
+          <Flame className="w-4 h-4" strokeWidth={1.5} />
+          <span className="text-sm font-semibold tracking-wide">{formatTime(timeLeft)}</span>
+          <span className="text-xs opacity-80">{t('return_to_timer')}</span>
+        </button>
+      )}
     </div>
   );
 }

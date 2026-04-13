@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import axios from 'axios';
-import { Anchor, ChevronRight } from 'lucide-react';
+import { Anchor, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
@@ -22,7 +23,10 @@ const URGE_ICONS = {
 
 export default function Onboarding() {
   const { user, setUser } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
+  const [step, setStep] = useState('disclaimer'); // 'disclaimer' | 'urge'
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [urgeTypes, setUrgeTypes] = useState([]);
   const [selected, setSelected] = useState(null);
   const [customType, setCustomType] = useState('');
@@ -55,6 +59,54 @@ export default function Onboarding() {
       setSaving(false);
     }
   };
+
+  if (step === 'disclaimer') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F9F8F6' }}>
+        <div className="w-full max-w-md" data-testid="onboarding-page">
+          <div className="text-center mb-8">
+            <img src="/anchr-circle-small.svg" alt="Anchr" className="w-16 h-16 mx-auto mb-5" />
+            <h1 className="font-heading text-3xl font-light tracking-tight" style={{ color: '#2A3A35' }}>
+              {t('welcome_to_anchr')}
+            </h1>
+          </div>
+
+          <div className="rounded-2xl p-6 shadow-sm mb-6" style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-5 h-5 shrink-0" style={{ color: '#E5989B' }} strokeWidth={1.5} />
+              <h2 className="font-medium text-base" style={{ color: '#2A3A35' }}>{t('disclaimer_title')}</h2>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: '#7A8B85' }}>
+              {t('disclaimer_text')}
+            </p>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer mb-6 p-4 rounded-xl" style={{ background: '#F9F8F6', border: '1px solid #E8E6E1' }}>
+            <input
+              type="checkbox"
+              checked={disclaimerAccepted}
+              onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+              className="mt-0.5 shrink-0 w-4 h-4"
+              style={{ accentColor: '#6B9080' }}
+            />
+            <span className="text-sm leading-relaxed" style={{ color: '#7A8B85' }}>
+              {t('disclaimer_accept')}
+            </span>
+          </label>
+
+          <Button
+            onClick={() => setStep('urge')}
+            disabled={!disclaimerAccepted}
+            className="w-full h-12 rounded-full text-white font-medium"
+            style={{ background: disclaimerAccepted ? '#6B9080' : '#A3B1AA' }}
+          >
+            {t('continue')}
+            <ChevronRight className="w-4 h-4 ml-1" strokeWidth={1.5} />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

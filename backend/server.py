@@ -12,7 +12,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
-from stats_helpers import calculate_streak, calculate_period_data, calculate_best_streak
+from stats_helpers import calculate_streak, calculate_period_data, calculate_best_streak, calculate_yearly_data
 from programs_data import PROGRAMS, PRESET_URGE_TYPES, PRESET_HABITS
 
 ROOT_DIR = Path(__file__).parent
@@ -117,6 +117,19 @@ async def _validate_session(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Session expired")
     return session
 
+async def log_audit(user_id: str, action: str, request: Request = None):
+    """Log major user actions. Never log personal content."""
+    ip = None
+    if request:
+        forwarded = request.headers.get("x-forwarded-for")
+        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
+    await db.audit_logs.insert_one({
+        "user_id": user_id,
+        "action": action,
+        "ip": ip,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
 async def get_current_user(request: Request) -> dict:
     token = _extract_token(request)
     if not token:
@@ -142,7 +155,7 @@ def set_session_cookie(response: Response, token: str):
 # ─── Auth Routes ───
 
 @api_router.post("/auth/register")
-async def register(data: UserRegister, response: Response):
+async def register(data: UserRegister, request: Request, response: Response):
     existing = await db.users.find_one({"email": data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -153,10 +166,11 @@ async def register(data: UserRegister, response: Response):
     token = create_session_token()
     await db.user_sessions.insert_one({"user_id": user_id, "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
     set_session_cookie(response, token)
+    await log_audit(user_id, "register", request)
     return {"user_id": user_id, "email": data.email, "name": data.name, "picture": None, "created_at": now, "urge_type": None, "custom_urge_type": None, "tier": "free"}
 
 @api_router.post("/auth/login")
-async def login(data: UserLogin, response: Response):
+async def login(data: UserLogin, request: Request, response: Response):
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -168,16 +182,18 @@ async def login(data: UserLogin, response: Response):
     now = datetime.now(timezone.utc).isoformat()
     await db.user_sessions.insert_one({"user_id": user["user_id"], "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
     set_session_cookie(response, token)
+    await log_audit(user["user_id"], "login", request)
     return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free")}
 
 @api_router.post("/auth/session")
-async def exchange_session(data: SessionExchange, response: Response):
+async def exchange_session(data: SessionExchange, request: Request, response: Response):
     async with httpx.AsyncClient() as hc:
         resp = await hc.get("https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data", headers={"X-Session-ID": data.session_id})
     if resp.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid session ID")
     google_data = resp.json()
     user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
+    is_new = not user
     if not user:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc).isoformat()
@@ -190,6 +206,7 @@ async def exchange_session(data: SessionExchange, response: Response):
     now = datetime.now(timezone.utc).isoformat()
     await db.user_sessions.insert_one({"user_id": user["user_id"], "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
     set_session_cookie(response, token)
+    await log_audit(user["user_id"], "register_google" if is_new else "login_google", request)
     return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free")}
 
 @api_router.get("/auth/me")
@@ -200,6 +217,9 @@ async def get_me(user: dict = Depends(get_current_user)):
 async def logout(request: Request, response: Response):
     token = request.cookies.get("session_token")
     if token:
+        session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+        if session:
+            await log_audit(session["user_id"], "logout", request)
         await db.user_sessions.delete_one({"session_token": token})
     response.delete_cookie("session_token", path="/", secure=True, samesite="none")
     return {"message": "Logged out"}
@@ -262,7 +282,7 @@ async def get_stats(user: dict = Depends(get_current_user), urge_type: Optional[
     streak_days = calculate_streak(relapses, user_created, now)
     urges_resisted = len([u for u in urges if u.get("outcome") == "resisted"])
     total_urges = len(urges)
-    return {"streak_days": streak_days, "best_streak": calculate_best_streak(relapses, streak_days), "urges_resisted": urges_resisted, "total_urges": total_urges, "total_relapses": len(relapses), "resist_rate": round(urges_resisted / total_urges * 100) if total_urges > 0 else 0, "weekly": calculate_period_data(urges, now, 7), "monthly": calculate_period_data(urges, now, 30)}
+    return {"streak_days": streak_days, "best_streak": calculate_best_streak(relapses, streak_days), "urges_resisted": urges_resisted, "total_urges": total_urges, "total_relapses": len(relapses), "resist_rate": round(urges_resisted / total_urges * 100) if total_urges > 0 else 0, "weekly": calculate_period_data(urges, now, 7), "monthly": calculate_period_data(urges, now, 30), "yearly": calculate_yearly_data(urges, now)}
 
 @api_router.get("/stats/triggers")
 async def get_trigger_stats(user: dict = Depends(get_current_user), urge_type: Optional[str] = None):
@@ -270,7 +290,7 @@ async def get_trigger_stats(user: dict = Depends(get_current_user), urge_type: O
     if urge_type:
         urge_query["urge_type"] = urge_type
     urges = await db.urges.find(urge_query, {"_id": 0}).to_list(1000)
-    triggers, emotions, hours = {}, {}, {}
+    triggers, emotions, hours, days = {}, {}, {}, {}
     for u in urges:
         t = u.get("trigger") or "Unknown"
         triggers[t] = triggers.get(t, 0) + 1
@@ -278,7 +298,23 @@ async def get_trigger_stats(user: dict = Depends(get_current_user), urge_type: O
         emotions[e] = emotions.get(e, 0) + 1
         h = u.get("hour_of_day", 0)
         hours[h] = hours.get(h, 0) + 1
-    return {"triggers": [{"name": k, "count": v} for k, v in sorted(triggers.items(), key=lambda x: -x[1])], "emotions": [{"name": k, "count": v} for k, v in sorted(emotions.items(), key=lambda x: -x[1])], "hours": [{"hour": k, "count": v} for k, v in sorted(hours.items())], "top_trigger": max(triggers, key=triggers.get) if triggers else None, "peak_hour": max(hours, key=hours.get) if hours else None}
+        try:
+            weekday = datetime.fromisoformat(u["created_at"].replace("Z", "+00:00")).weekday()
+            days[weekday] = days.get(weekday, 0) + 1
+        except Exception:
+            pass
+    # Fill missing hours 0-23 and days 0-6 with zero so chart is continuous
+    all_hours = {h: hours.get(h, 0) for h in range(24)}
+    all_days = {d: days.get(d, 0) for d in range(7)}
+    return {
+        "triggers": [{"name": k, "count": v} for k, v in sorted(triggers.items(), key=lambda x: -x[1])],
+        "emotions": [{"name": k, "count": v} for k, v in sorted(emotions.items(), key=lambda x: -x[1])],
+        "hours": [{"hour": k, "count": v} for k, v in sorted(all_hours.items())],
+        "days": [{"day": k, "count": v} for k, v in sorted(all_days.items())],
+        "top_trigger": max(triggers, key=triggers.get) if triggers else None,
+        "peak_hour": max(hours, key=hours.get) if hours else None,
+        "peak_day": max(days, key=days.get) if days else None,
+    }
 
 # ─── Anti-Relapse Insights (rule-based) ───
 
@@ -497,7 +533,7 @@ async def alert_buddy(buddy_id: str, user: dict = Depends(get_current_user)):
 # ─── Data & Privacy Routes ───
 
 @api_router.get("/export")
-async def export_data(user: dict = Depends(get_current_user)):
+async def export_data(request: Request, user: dict = Depends(get_current_user)):
     uid = user["user_id"]
     urges = await db.urges.find({"user_id": uid}, {"_id": 0}).to_list(None)
     relapses = await db.relapses.find({"user_id": uid}, {"_id": 0}).to_list(None)
@@ -506,25 +542,71 @@ async def export_data(user: dict = Depends(get_current_user)):
     completions = await db.habit_completions.find({"user_id": uid}, {"_id": 0}).to_list(None)
     reminders = await db.reminders.find_one({"user_id": uid}, {"_id": 0})
     enrollments = await db.program_enrollments.find({"user_id": uid}, {"_id": 0}).to_list(None)
-    buddies = await db.buddies.find({"user_id": uid}, {"_id": 0}).to_list(None)
+    buddies_list = await db.buddies.find({"user_id": uid}, {"_id": 0}).to_list(None)
     profile = {k: v for k, v in user.items() if k not in ("password_hash",)}
+
+    resisted = sum(1 for u in urges if u.get("outcome") == "resisted")
+
     export = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
+        "note": "This file contains all data Anchr has stored for your account.",
+        "summary": {
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "member_since": user.get("created_at"),
+            "currently_working_on": user.get("custom_urge_type") if user.get("urge_type") == "other" else user.get("urge_type"),
+            "total_urges_tracked": len(urges),
+            "total_urges_resisted": resisted,
+            "total_relapses": len(relapses),
+            "total_motivations_saved": len(motivations),
+            "total_habits": len(habits),
+            "total_programs_enrolled": len(enrollments),
+            "accountability_buddies": len(buddies_list),
+        },
         "profile": profile,
-        "urges": urges,
-        "relapses": relapses,
-        "motivations": motivations,
-        "habits": habits,
-        "habit_completions": completions,
-        "reminders": reminders,
-        "program_enrollments": enrollments,
-        "buddies": buddies,
+        "urges": {
+            "count": len(urges),
+            "description": "Every urge session you have started",
+            "records": urges,
+        },
+        "relapses": {
+            "count": len(relapses),
+            "description": "Relapse events you have logged",
+            "records": relapses,
+        },
+        "motivations": {
+            "count": len(motivations),
+            "description": "Your personal motivation messages",
+            "records": motivations,
+        },
+        "habits": {
+            "count": len(habits),
+            "description": "Habits you are tracking",
+            "records": habits,
+            "completions": {
+                "count": len(completions),
+                "records": completions,
+            },
+        },
+        "programs": {
+            "count": len(enrollments),
+            "description": "Recovery programs you have enrolled in",
+            "records": enrollments,
+        },
+        "reminders": reminders or {},
+        "accountability_buddies": {
+            "count": len(buddies_list),
+            "description": "People you have added as accountability buddies",
+            "records": [{k: v for k, v in b.items() if k != "email"} for b in buddies_list],
+        },
     }
+    await log_audit(uid, "export_data", request)
     return JSONResponse(content=export, headers={"Content-Disposition": "attachment; filename=anchr_data.json"})
 
 @api_router.delete("/data")
-async def delete_user_data(user: dict = Depends(get_current_user), response: Response = None):
+async def delete_user_data(request: Request, user: dict = Depends(get_current_user)):
     uid = user["user_id"]
+    await log_audit(uid, "delete_data", request)
     await db.urges.delete_many({"user_id": uid})
     await db.relapses.delete_many({"user_id": uid})
     await db.motivations.delete_many({"user_id": uid})
@@ -534,14 +616,13 @@ async def delete_user_data(user: dict = Depends(get_current_user), response: Res
     await db.program_enrollments.delete_many({"user_id": uid})
     await db.buddies.delete_many({"user_id": uid})
     await db.buddy_alerts.delete_many({"user_id": uid})
-    # Reset streak-related fields on profile
     await db.users.update_one({"user_id": uid}, {"$set": {"urge_type": None, "custom_urge_type": None}})
     return {"message": "All data deleted. Account is still active."}
 
 @api_router.delete("/account")
 async def delete_account(request: Request, user: dict = Depends(get_current_user)):
     uid = user["user_id"]
-    # Delete all user data
+    await log_audit(uid, "delete_account", request)
     await db.urges.delete_many({"user_id": uid})
     await db.relapses.delete_many({"user_id": uid})
     await db.motivations.delete_many({"user_id": uid})
