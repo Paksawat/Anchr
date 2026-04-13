@@ -44,7 +44,19 @@ export function TriggerInsights({ t, triggerStats }) {
 export function PeakTimes({ t, triggerStats }) {
   return (
     <div className="rounded-2xl p-6 shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}>
-      <h3 className="font-heading text-lg font-medium mb-4" style={{ color: '#2A3A35' }}>{t('peak_times')}</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-heading text-lg font-medium" style={{ color: '#2A3A35' }}>{t('peak_times')}</h3>
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: '#7A8B85' }}>
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#E5989B' }} />
+            {t('peak_hour_label')}
+          </span>
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: '#7A8B85' }}>
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#A4C3B2' }} />
+            {t('other_hours_label')}
+          </span>
+        </div>
+      </div>
       {triggerStats?.peak_hour != null && (
         <div className="mb-4 p-3 rounded-xl" style={{ background: '#E2D4C844' }}>
           <p className="text-sm font-medium" style={{ color: '#7A8B85' }}>
@@ -127,7 +139,9 @@ export function RecentUrges({ t, urges }) {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>
-                        {u.trigger || t('no_trigger')} · {u.emotion || t('no_emotion')}
+                        {u.trigger ? (t(u.trigger) !== u.trigger ? t(u.trigger) : u.trigger) : t('no_trigger')}
+                        {' · '}
+                        {u.emotion ? (t(u.emotion) !== u.emotion ? t(u.emotion) : u.emotion) : t('no_emotion')}
                       </p>
                       {urgeTypeLabel && (
                         <span

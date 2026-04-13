@@ -231,7 +231,7 @@ function SetupPhase({
             </SelectTrigger>
             <SelectContent>
               {TRIGGERS_KEYS.map((k) => (
-                <SelectItem key={k} value={t(k)}>
+                <SelectItem key={k} value={k}>
                   {t(k)}
                 </SelectItem>
               ))}
@@ -252,7 +252,7 @@ function SetupPhase({
             </SelectTrigger>
             <SelectContent>
               {EMOTIONS_KEYS.map((k) => (
-                <SelectItem key={k} value={t(k)}>
+                <SelectItem key={k} value={k}>
                   {t(k)}
                 </SelectItem>
               ))}

@@ -17,6 +17,7 @@ import {
   Sparkles,
   Plus,
   X,
+  RefreshCw,
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_API_URL}/api`;
@@ -111,6 +112,7 @@ export default function Dashboard() {
   const [slipEmotion, setSlipEmotion] = useState('');
   const [slipNotes, setSlipNotes] = useState('');
   const [slipSaving, setSlipSaving] = useState(false);
+  const [motivationIndex, setMotivationIndex] = useState(0);
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
@@ -189,10 +191,14 @@ export default function Dashboard() {
     return t('good_evening');
   };
 
-  const randomMotivation =
-    motivations.length > 0
-      ? motivations[Math.floor(Math.random() * motivations.length)]
-      : null;
+  const currentMotivation = motivations.length > 0 ? motivations[motivationIndex % motivations.length] : null;
+
+  const shuffleMotivation = () => {
+    if (motivations.length <= 1) return;
+    let next;
+    do { next = Math.floor(Math.random() * motivations.length); } while (next === motivationIndex % motivations.length);
+    setMotivationIndex(next);
+  };
 
   const urgeLabel = user?.urge_type
     ? user.urge_type === 'other'
@@ -349,23 +355,29 @@ export default function Dashboard() {
                   {t('your_reminder')}
                 </h3>
               </div>
-              {randomMotivation ? (
-                <p
-                  className="text-base leading-relaxed italic"
-                  style={{
-                    color: '#7A8B85',
-                    fontFamily: 'Figtree, sans-serif',
-                  }}
-                >
-                  "{randomMotivation.message}"
-                </p>
+              {currentMotivation ? (
+                <div>
+                  <p
+                    className="text-base leading-relaxed italic"
+                    style={{ color: '#7A8B85', fontFamily: 'Figtree, sans-serif' }}
+                  >
+                    "{currentMotivation.message}"
+                  </p>
+                  {motivations.length > 1 && (
+                    <button
+                      onClick={shuffleMotivation}
+                      className="mt-3 flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-70"
+                      style={{ color: '#A3B1AA' }}
+                    >
+                      <RefreshCw className="w-3 h-3" strokeWidth={2} />
+                      {t('another_one')}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <p
                   className="text-sm"
-                  style={{
-                    color: '#A3B1AA',
-                    fontFamily: 'Figtree, sans-serif',
-                  }}
+                  style={{ color: '#A3B1AA', fontFamily: 'Figtree, sans-serif' }}
                 >
                   {t('add_reminder_prompt')}
                 </p>
@@ -377,7 +389,7 @@ export default function Dashboard() {
               className="mt-4 text-sm font-medium flex items-center gap-1 transition-colors duration-200"
               style={{ color: '#6B9080' }}
             >
-              {randomMotivation ? t('view_all') : t('add_one_now')}{' '}
+              {currentMotivation ? t('view_all') : t('add_one_now')}{' '}
               <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
             </button>
           </div>
@@ -418,7 +430,7 @@ export default function Dashboard() {
               >
                 <option value="">{t('trigger_placeholder')}</option>
                 {['stress','boredom','loneliness','location','social','tiredness','habit_loop','other'].map((k) => (
-                  <option key={k} value={t(k)}>{t(k)}</option>
+                  <option key={k} value={k}>{t(k)}</option>
                 ))}
               </select>
               <select
@@ -429,7 +441,7 @@ export default function Dashboard() {
               >
                 <option value="">{t('emotion_placeholder')}</option>
                 {['anxious','sad','angry','frustrated','lonely','restless','numb','overwhelmed'].map((k) => (
-                  <option key={k} value={t(k)}>{t(k)}</option>
+                  <option key={k} value={k}>{t(k)}</option>
                 ))}
               </select>
               <textarea

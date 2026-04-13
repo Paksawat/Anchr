@@ -786,7 +786,7 @@ export default function Settings() {
                     </SelectTrigger>
                     <SelectContent>
                       {TRIGGER_KEYS.map((k) => (
-                        <SelectItem key={k} value={t(k)}>
+                        <SelectItem key={k} value={k}>
                           {t(k)}
                         </SelectItem>
                       ))}
@@ -805,7 +805,7 @@ export default function Settings() {
                     </SelectTrigger>
                     <SelectContent>
                       {EMOTION_KEYS.map((k) => (
-                        <SelectItem key={k} value={t(k)}>
+                        <SelectItem key={k} value={k}>
                           {t(k)}
                         </SelectItem>
                       ))}
@@ -846,8 +846,9 @@ export default function Settings() {
                         className="text-sm font-medium"
                         style={{ color: '#2A3A35' }}
                       >
-                        {r.trigger || t('unknown_trigger')} -{' '}
-                        {r.emotion || t('unknown_emotion')}
+                        {r.trigger ? (t(r.trigger) !== r.trigger ? t(r.trigger) : r.trigger) : t('unknown_trigger')}
+                        {' - '}
+                        {r.emotion ? (t(r.emotion) !== r.emotion ? t(r.emotion) : r.emotion) : t('unknown_emotion')}
                       </p>
                       <p className="text-xs mt-1" style={{ color: '#A3B1AA' }}>
                         {new Date(r.created_at).toLocaleDateString()}
