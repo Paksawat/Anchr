@@ -347,7 +347,7 @@ async def get_insights(user: dict = Depends(get_current_user)):
         peak = max(hours, key=hours.get)
         current_hour = now.hour
         if abs(current_hour - peak) <= 2:
-            insights.append({"type": "warning", "title": "High-risk time approaching", "message": "You usually feel urges around this time. Stay prepared.", "action": "Use the urge timer or breathing exercise"})
+            insights.append({"type": "warning", "key": "insight_high_risk_time", "values": {}, "title": "High-risk time approaching", "message": "You usually feel urges around this time. Stay prepared.", "action": "Use the urge timer or breathing exercise"})
     # Top trigger insight
     triggers = {}
     for u in urges:
@@ -356,7 +356,7 @@ async def get_insights(user: dict = Depends(get_current_user)):
             triggers[t] = triggers.get(t, 0) + 1
     if triggers:
         top = max(triggers, key=triggers.get)
-        insights.append({"type": "insight", "title": f"{top} is your #1 trigger", "message": f"{top} has triggered {triggers[top]} urges. Build specific defenses for this.", "action": "Create an if-then plan for this trigger"})
+        insights.append({"type": "insight", "key": "insight_top_trigger", "values": {"trigger": top, "count": triggers[top]}, "title": f"{top} is your #1 trigger", "message": f"{top} has triggered {triggers[top]} urges. Build specific defenses for this.", "action": "Create an if-then plan for this trigger"})
     # Habit correlation
     if habits_completed and urges:
         habit_dates = set(h.get("date") for h in habits_completed)
@@ -365,15 +365,15 @@ async def get_insights(user: dict = Depends(get_current_user)):
         if len(habit_dates) > 3 and urge_dates_without > urge_dates_with_habits:
             reduction = round((1 - urge_dates_with_habits / max(urge_dates_without, 1)) * 100)
             if reduction > 0:
-                insights.append({"type": "positive", "title": "Habits are working", "message": f"On days you complete habits, you have {reduction}% fewer urges.", "action": "Keep your habit streak going"})
+                insights.append({"type": "positive", "key": "insight_habits_working", "values": {"reduction": reduction}, "title": "Habits are working", "message": f"On days you complete habits, you have {reduction}% fewer urges.", "action": "Keep your habit streak going"})
     # Evening warning
     evening_urges = len([u for u in urges if u.get("hour_of_day", 0) >= 20])
     if evening_urges > len(urges) * 0.4 and len(urges) > 5:
-        insights.append({"type": "suggestion", "title": "Evening pattern detected", "message": "Most of your urges happen after 8pm. An evening routine could help.", "action": "Try the Night Control Program"})
+        insights.append({"type": "suggestion", "key": "insight_evening_pattern", "values": {}, "title": "Evening pattern detected", "message": "Most of your urges happen after 8pm. An evening routine could help.", "action": "Try the Night Control Program"})
     # Stress pattern
     stress_urges = len([u for u in urges if u.get("trigger") == "Stress" or u.get("emotion") == "Anxious"])
     if stress_urges > len(urges) * 0.3 and len(urges) > 5:
-        insights.append({"type": "suggestion", "title": "Stress is a major factor", "message": "Stress and anxiety trigger many of your urges. Add stress-relief habits.", "action": "Add breathing or meditation to your daily habits"})
+        insights.append({"type": "suggestion", "key": "insight_stress_factor", "values": {}, "title": "Stress is a major factor", "message": "Stress and anxiety trigger many of your urges. Add stress-relief habits.", "action": "Add breathing or meditation to your daily habits"})
     return insights
 
 # ─── Motivations ───

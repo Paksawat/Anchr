@@ -23,6 +23,7 @@ import {
 const API = `${process.env.REACT_APP_API_URL}/api`;
 
 function InsightCard({ insight }) {
+  const { t } = useLanguage();
   const iconMap = {
     warning: AlertTriangle,
     insight: Lightbulb,
@@ -42,6 +43,12 @@ function InsightCard({ insight }) {
     suggestion: '#A8DADC15',
   };
   const Icon = iconMap[insight.type] || Lightbulb;
+
+  // Use translation key + interpolated values when available (backend sends key+values),
+  // fall back to the raw English strings for older responses.
+  const title  = insight.key ? t(`${insight.key}_title`,  insight.values) : insight.title;
+  const message = insight.key ? t(`${insight.key}_msg`,   insight.values) : insight.message;
+  const action  = insight.key ? t(`${insight.key}_action`, insight.values) : insight.action;
 
   return (
     <div
@@ -64,17 +71,17 @@ function InsightCard({ insight }) {
         </div>
         <div>
           <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>
-            {insight.title}
+            {title}
           </p>
           <p className="text-xs mt-0.5" style={{ color: '#7A8B85' }}>
-            {insight.message}
+            {message}
           </p>
-          {insight.action && (
+          {action && (
             <p
               className="text-xs mt-1 font-medium"
               style={{ color: colorMap[insight.type] }}
             >
-              {insight.action}
+              {action}
             </p>
           )}
         </div>

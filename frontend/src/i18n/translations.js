@@ -190,6 +190,27 @@ const translations = {
     filter_by_urge: 'Filter by urge',
     all_urges: 'All urges',
 
+    // Dashboard Insights
+    insight_high_risk_time_title: 'High-risk time approaching',
+    insight_high_risk_time_msg: 'You usually feel urges around this time. Stay prepared.',
+    insight_high_risk_time_action: 'Use the urge timer or breathing exercise',
+
+    insight_top_trigger_title: '{trigger} is your #1 trigger',
+    insight_top_trigger_msg: '{trigger} has triggered {count} urges. Build specific defenses for this.',
+    insight_top_trigger_action: 'Create an if-then plan for this trigger',
+
+    insight_habits_working_title: 'Habits are working',
+    insight_habits_working_msg: 'On days you complete habits, you have {reduction}% fewer urges.',
+    insight_habits_working_action: 'Keep your habit streak going',
+
+    insight_evening_pattern_title: 'Evening pattern detected',
+    insight_evening_pattern_msg: 'Most of your urges happen after 8pm. An evening routine could help.',
+    insight_evening_pattern_action: 'Try the Night Control Program',
+
+    insight_stress_factor_title: 'Stress is a major factor',
+    insight_stress_factor_msg: 'Stress and anxiety trigger many of your urges. Add stress-relief habits.',
+    insight_stress_factor_action: 'Add breathing or meditation to your daily habits',
+
     // Motivation Wall
     motivation_wall: 'Motivation Wall',
     motivation_subtitle: 'Your words of strength, always here when you need them',
@@ -524,6 +545,27 @@ For privacy questions, contact us through the app.`,
     no_urges_yet: 'Ingen trang registreret endnu. Det er helt okay.',
     filter_by_urge: 'Filtrer efter trang',
     all_urges: 'Al trang',
+
+    // Dashboard Insights
+    insight_high_risk_time_title: 'Højrisikotid nærmer sig',
+    insight_high_risk_time_msg: 'Du oplever normalt trang på dette tidspunkt. Vær forberedt.',
+    insight_high_risk_time_action: 'Brug trang-timeren eller åndedrætsøvelsen',
+
+    insight_top_trigger_title: '{trigger} er din #1 udløser',
+    insight_top_trigger_msg: '{trigger} har udløst {count} trang. Byg specifikke forsvarsstrategier mod dette.',
+    insight_top_trigger_action: 'Lav en hvis-så plan for denne udløser',
+
+    insight_habits_working_title: 'Vanerne virker',
+    insight_habits_working_msg: 'På dage hvor du gennemfører dine vaner, har du {reduction}% færre trang.',
+    insight_habits_working_action: 'Hold din vane-streak kørende',
+
+    insight_evening_pattern_title: 'Aftenmønster opdaget',
+    insight_evening_pattern_msg: 'De fleste af dine trang opstår efter kl. 20. En aftenrutine kan hjælpe.',
+    insight_evening_pattern_action: 'Prøv Natkontrol-programmet',
+
+    insight_stress_factor_title: 'Stress er en stor faktor',
+    insight_stress_factor_msg: 'Stress og angst udløser mange af dine trang. Tilføj stresslindrende vaner.',
+    insight_stress_factor_action: 'Tilføj vejrtrækning eller meditation til dine daglige vaner',
 
     // Motivation Wall
     motivation_wall: 'Motivationsvæg',

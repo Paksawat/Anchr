@@ -55,8 +55,12 @@ export function LanguageProvider({ children }) {
     }
   }, []);
 
-  const t = useCallback((key) => {
-    return translations[lang]?.[key] || translations.en[key] || key;
+  const t = useCallback((key, values) => {
+    let str = translations[lang]?.[key] || translations.en[key] || key;
+    if (values && typeof str === 'string') {
+      str = str.replace(/\{(\w+)\}/g, (_, k) => values[k] ?? '');
+    }
+    return str;
   }, [lang]);
 
   return (

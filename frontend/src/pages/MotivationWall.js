@@ -99,8 +99,8 @@ export default function MotivationWall() {
   return (
     <AppLayout>
       <div data-testid="motivation-page" className="space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h1
               className="font-heading text-4xl sm:text-5xl font-light tracking-tight"
               style={{ color: '#2A3A35' }}
@@ -118,11 +118,11 @@ export default function MotivationWall() {
             <DialogTrigger asChild>
               <Button
                 data-testid="add-motivation-dialog-btn"
-                className="rounded-full text-white font-medium"
+                className="rounded-full text-white font-medium shrink-0"
                 style={{ background: '#6B9080' }}
               >
-                <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
-                {t('add_message')}
+                <Plus className="w-4 h-4 sm:mr-2" strokeWidth={1.5} />
+                <span className="hidden sm:inline">{t('add_message')}</span>
               </Button>
             </DialogTrigger>
             <DialogContent
