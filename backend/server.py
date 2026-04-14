@@ -3,13 +3,16 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from urllib.parse import urlparse
+from collections import defaultdict, deque
 import os
+import time
 import logging
 import uuid
 import httpx
 import bcrypt
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from stats_helpers import calculate_streak, calculate_period_data, calculate_best_streak, calculate_yearly_data
@@ -28,12 +31,20 @@ api_router = APIRouter(prefix="/api")
 # ─── Models ───
 
 class UserRegister(BaseModel):
-    email: str
+    email: EmailStr                  # validated email format
     password: str
     name: str
 
+    @field_validator("password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        # Enforce minimum password length server-side — never trust client validation alone
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
 class UserLogin(BaseModel):
-    email: str
+    email: EmailStr                  # validated email format
     password: str
 
 class UrgeCreate(BaseModel):
@@ -55,8 +66,9 @@ class MotivationCreate(BaseModel):
 
 class ReminderSettings(BaseModel):
     enabled: bool = True
-    times: List[str] = []
-    days: List[str] = []
+    # Field(default_factory=list) prevents shared mutable default across instances
+    times: List[str] = Field(default_factory=list)
+    days: List[str] = Field(default_factory=list)
 
 class RelapseCreate(BaseModel):
     trigger: Optional[str] = None
@@ -66,7 +78,7 @@ class RelapseCreate(BaseModel):
 class ProfileUpdate(BaseModel):
     urge_type: Optional[str] = None
     custom_urge_type: Optional[str] = None
-    tier: Optional[str] = None
+    # `tier` intentionally omitted — privilege field, only settable server-side (billing/admin)
     disclaimer_accepted: Optional[bool] = None
 
 class HabitCreate(BaseModel):
@@ -90,6 +102,23 @@ class ProgramEnroll(BaseModel):
 class DayComplete(BaseModel):
     day: int
     reflection: Optional[str] = None
+
+# ─── Rate Limiting ───
+# Simple in-memory sliding-window limiter.
+# Works for single-instance Render deployments.
+# For multi-instance: replace with Redis-backed slowapi.
+
+_rl_store: dict = defaultdict(deque)
+
+def _check_rate_limit(key: str, limit: int, window_seconds: int) -> None:
+    """Raise 429 if `key` exceeds `limit` calls within `window_seconds`."""
+    now = time.monotonic()
+    bucket = _rl_store[key]
+    while bucket and bucket[0] < now - window_seconds:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
+    bucket.append(now)
 
 # ─── Auth Helpers ───
 
@@ -154,6 +183,10 @@ def set_session_cookie(response: Response, token: str):
 
 @api_router.post("/auth/register")
 async def register(data: UserRegister, request: Request, response: Response):
+    # Rate limit: 5 registrations per IP per minute
+    client_ip = (request.headers.get("x-forwarded-for", "") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    _check_rate_limit(f"register:{client_ip}", limit=5, window_seconds=60)
+
     existing = await db.users.find_one({"email": data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -169,6 +202,10 @@ async def register(data: UserRegister, request: Request, response: Response):
 
 @api_router.post("/auth/login")
 async def login(data: UserLogin, request: Request, response: Response):
+    # Rate limit: 10 login attempts per IP per minute
+    client_ip = (request.headers.get("x-forwarded-for", "") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    _check_rate_limit(f"login:{client_ip}", limit=10, window_seconds=60)
+
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -208,8 +245,8 @@ async def update_profile(data: ProfileUpdate, user: dict = Depends(get_current_u
         updates["urge_type"] = data.urge_type
     if data.custom_urge_type is not None:
         updates["custom_urge_type"] = data.custom_urge_type
-    if data.tier is not None:
-        updates["tier"] = data.tier
+    # `tier` is NOT updated here — privilege escalation prevention.
+    # Tier changes must go through billing/admin endpoints only.
     if data.disclaimer_accepted is not None:
         updates["disclaimer_accepted"] = data.disclaimer_accepted
     if updates:
@@ -615,8 +652,61 @@ async def delete_account(request: Request, user: dict = Depends(get_current_user
 
 # ─── App Setup ───
 
+# Build CORS/CSRF allowlist from env — no wildcard fallback.
+# Required on Render: CORS_ORIGINS=https://anchr.site,https://your-project.vercel.app
+_cors_raw = os.environ.get("CORS_ORIGINS", "")
+_ALLOWED_ORIGINS: List[str] = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+_ALLOWED_ORIGINS_SET: set = set(_ALLOWED_ORIGINS)
+
+if not _ALLOWED_ORIGINS:
+    raise RuntimeError(
+        "CORS_ORIGINS env var is required. "
+        "Set it to a comma-separated list of allowed origins, e.g.: "
+        "https://anchr.site,https://your-project.vercel.app"
+    )
+
 app.include_router(api_router)
-app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','), allow_methods=["*"], allow_headers=["*"])
+
+# CSRF protection — Origin/Referer header validation for state-changing methods.
+# Must be defined BEFORE add_middleware(CORSMiddleware) so CORS wraps it (CORS runs first,
+# handling OPTIONS preflight before CSRF logic executes).
+@app.middleware("http")
+async def csrf_protection(request: Request, call_next):
+    """
+    CSRF protection via Origin/Referer validation (OWASP recommended pattern for REST APIs).
+    Browsers always send the Origin header on cross-origin requests and it cannot be spoofed.
+    If Origin is present and not in the allowlist, the request is rejected with 403.
+    Requests with no Origin/Referer (e.g. server-to-server, curl) are passed through —
+    they pose no CSRF risk because they have no browser session cookies.
+    """
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        origin = request.headers.get("origin", "")
+        if not origin:
+            # Fallback: derive origin from Referer (set by some browsers on navigation)
+            referer = request.headers.get("referer", "")
+            if referer:
+                try:
+                    parsed = urlparse(referer)
+                    origin = f"{parsed.scheme}://{parsed.netloc}"
+                except Exception:
+                    origin = ""
+        if origin and origin not in _ALLOWED_ORIGINS_SET:
+            return JSONResponse(
+                {"detail": "CSRF validation failed: origin not permitted"},
+                status_code=403,
+            )
+    return await call_next(request)
+
+# CORS middleware — outermost layer (handles OPTIONS preflight before any other logic).
+# allow_headers is explicit — wildcard is not allowed when allow_credentials=True.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],   # explicit, no wildcard
+)
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
