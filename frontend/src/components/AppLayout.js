@@ -3,6 +3,8 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUrgeTimer } from '../contexts/UrgeTimerContext';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import InstallBanner from './InstallBanner';
 import {
   LayoutDashboard, Flame, TrendingUp, Heart, Settings,
   LogOut, Menu, X, BookOpen, ListChecks, Lock, Sparkles
@@ -23,6 +25,7 @@ export default function AppLayout({ children }) {
   const isPaid = user?.tier === 'paid';
   const { phase, timeLeft } = useUrgeTimer();
   const timerActive = phase === 'active' && location.pathname !== '/urge-timer';
+  const { showBanner } = useInstallPrompt();
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: t('nav_dashboard'), free: true },
@@ -150,9 +153,12 @@ export default function AppLayout({ children }) {
         </div>
       )}
 
-      <main className="flex-1 overflow-y-auto md:p-8 p-4 pt-20 md:pt-8">
+      {/* Extra bottom padding on mobile when install banner is visible */}
+      <main className={`flex-1 overflow-y-auto md:p-8 p-4 pt-20 md:pt-8 ${showBanner ? 'pb-24' : ''}`}>
         <div className="max-w-6xl mx-auto">{children}</div>
       </main>
+
+      <InstallBanner />
 
       {/* Floating mini timer — visible on all pages when a timer is running */}
       {timerActive && (
