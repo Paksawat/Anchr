@@ -53,7 +53,7 @@ function HabitRow({ habit, completed, onToggle, onDelete }) {
 
   return (
     <div
-      className="flex items-center gap-3 p-4 rounded-xl transition-all duration-200"
+      className="group flex items-center gap-3 p-4 rounded-xl transition-all duration-200"
       style={{
         background: isCompletedToday ? '#6B908010' : '#FFFFFF',
         border: `1px solid ${isCompletedToday ? '#6B908044' : '#E8E6E1'}`,
@@ -91,8 +91,9 @@ function HabitRow({ habit, completed, onToggle, onDelete }) {
       </div>
       <button
         onClick={() => onDelete(habit.habit_id)}
-        className="p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+        className="p-2 rounded-lg shrink-0 opacity-40 group-hover:opacity-100 active:opacity-100 transition-opacity"
         style={{ color: '#A3B1AA' }}
+        aria-label={`Remove ${habit.name}`}
       >
         <Trash2 className="w-4 h-4" strokeWidth={1.5} />
       </button>
