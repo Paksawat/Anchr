@@ -36,9 +36,6 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
-class SessionExchange(BaseModel):
-    session_id: str
-
 class UrgeCreate(BaseModel):
     trigger: Optional[str] = None
     emotion: Optional[str] = None
@@ -186,29 +183,6 @@ async def login(data: UserLogin, request: Request, response: Response):
     await log_audit(user["user_id"], "login", request)
     return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free"), "disclaimer_accepted": user.get("disclaimer_accepted", True)}
 
-@api_router.post("/auth/session")
-async def exchange_session(data: SessionExchange, request: Request, response: Response):
-    async with httpx.AsyncClient() as hc:
-        resp = await hc.get("https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data", headers={"X-Session-ID": data.session_id})
-    if resp.status_code != 200:
-        raise HTTPException(status_code=401, detail="Invalid session ID")
-    google_data = resp.json()
-    user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
-    is_new = not user
-    if not user:
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        now = datetime.now(timezone.utc).isoformat()
-        user = {"user_id": user_id, "email": google_data["email"], "name": google_data.get("name", ""), "picture": google_data.get("picture"), "created_at": now, "auth_provider": "google", "urge_type": None, "custom_urge_type": None, "tier": "free", "disclaimer_accepted": False}
-        await db.users.insert_one(user)
-    else:
-        await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"name": google_data.get("name", user["name"]), "picture": google_data.get("picture", user.get("picture"))}})
-        user = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0})
-    token = create_session_token()
-    now = datetime.now(timezone.utc).isoformat()
-    await db.user_sessions.insert_one({"user_id": user["user_id"], "session_token": token, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now})
-    set_session_cookie(response, token)
-    await log_audit(user["user_id"], "register_google" if is_new else "login_google", request)
-    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture"), "created_at": user.get("created_at"), "urge_type": user.get("urge_type"), "custom_urge_type": user.get("custom_urge_type"), "tier": user.get("tier", "free"), "disclaimer_accepted": user.get("disclaimer_accepted", True)}
 
 @api_router.get("/auth/me")
 async def get_me(user: dict = Depends(get_current_user)):
