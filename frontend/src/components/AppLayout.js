@@ -4,7 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUrgeTimer } from '../contexts/UrgeTimerContext';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import InstallBanner from './InstallBanner';
+import InactivityModal from './InactivityModal';
 import {
   LayoutDashboard, Flame, TrendingUp, Heart, Settings,
   LogOut, Menu, X, BookOpen, ListChecks, Lock, Sparkles
@@ -26,6 +28,13 @@ export default function AppLayout({ children }) {
   const { phase, timeLeft } = useUrgeTimer();
   const timerActive = phase === 'active' && location.pathname !== '/urge-timer';
   const { showBanner } = useInstallPrompt();
+
+  const handleInactivityLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+  const { showPrompt, countdown, stayLoggedIn, forceLogout } =
+    useInactivityTimeout(handleInactivityLogout);
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: t('nav_dashboard'), free: true },
@@ -159,6 +168,14 @@ export default function AppLayout({ children }) {
       </main>
 
       <InstallBanner />
+
+      {showPrompt && (
+        <InactivityModal
+          countdown={countdown}
+          onStay={stayLoggedIn}
+          onLogout={forceLogout}
+        />
+      )}
 
       {/* Floating mini timer — visible on all pages when a timer is running */}
       {timerActive && (
