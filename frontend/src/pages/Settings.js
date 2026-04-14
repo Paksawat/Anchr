@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import UpgradePrompt from '../components/UpgradePrompt';
@@ -27,6 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../components/ui/dialog';
+import { scheduleReminderNotifications } from '../hooks/useNotifications';
 import {
   Select,
   SelectContent,
@@ -77,6 +78,10 @@ export default function Settings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Notification permission state — re-evaluated on mount and after permission request
+  const [notifPermission, setNotifPermission] = useState(
+    'Notification' in window ? Notification.permission : 'unsupported',
+  );
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
@@ -102,12 +107,22 @@ export default function Settings() {
       await axios.put(`${API}/reminders`, reminders, { withCredentials: true });
       setReminderSaved(true);
       setTimeout(() => setReminderSaved(false), 3000);
+      // Schedule OS notifications for today's remaining reminder times
+      scheduleReminderNotifications(reminders);
     } catch (error) {
       console.error('Failed to save reminders:', error);
     } finally {
       setSaving(false);
     }
   };
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (!('Notification' in window)) return;
+    const result = await Notification.requestPermission();
+    setNotifPermission(result);
+    // If just granted, schedule today's reminders immediately
+    if (result === 'granted') scheduleReminderNotifications(reminders);
+  }, [reminders]);
 
   const saveUrgeType = async () => {
     setUrgeSaving(true);
@@ -716,6 +731,41 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
+              {/* Notification permission */}
+              {notifPermission !== 'unsupported' && (
+                <div
+                  className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ background: '#F9F8F6', border: '1px solid #E8E6E1' }}
+                >
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#2A3A35' }}>
+                      Push notifications
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#A3B1AA' }}>
+                      {notifPermission === 'granted'
+                        ? 'Notifications enabled — you\'ll be reminded at your set times'
+                        : notifPermission === 'denied'
+                          ? 'Blocked in browser settings — re-enable to get reminders'
+                          : 'Allow notifications to receive reminders'}
+                    </p>
+                  </div>
+                  {notifPermission === 'default' && (
+                    <Button
+                      onClick={requestNotificationPermission}
+                      className="rounded-full text-white text-xs font-medium shrink-0 ml-3"
+                      style={{ background: '#6B9080' }}
+                    >
+                      Enable
+                    </Button>
+                  )}
+                  {notifPermission === 'granted' && (
+                    <span className="text-xs font-medium shrink-0 ml-3" style={{ color: '#6B9080' }}>
+                      ✓ On
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <Button
                   data-testid="save-reminders-btn"

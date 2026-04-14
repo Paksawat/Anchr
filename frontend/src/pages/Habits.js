@@ -126,67 +126,87 @@ export default function Habits() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addPresetHabit = async (preset) => {
+    // Already in list — no-op
+    if (habits.find((h) => h.habit_id === preset.habit_id)) return;
+
+    // Optimistic: show immediately
+    const optimistic = { habit_id: preset.habit_id, name: preset.name, icon: preset.icon, category: preset.category };
+    setHabits((prev) => [...prev, optimistic]);
+
     try {
       const res = await axios.post(
         `${API}/habits`,
-        {
-          name: preset.name,
-          icon: preset.icon,
-          category: preset.category,
-          habit_id: preset.habit_id,
-        },
+        { name: preset.name, icon: preset.icon, category: preset.category, habit_id: preset.habit_id },
         { withCredentials: true },
       );
-      if (!habits.find((h) => h.habit_id === res.data.habit_id)) {
-        setHabits([...habits, res.data]);
-      }
+      // Replace optimistic entry with server-confirmed data
+      setHabits((prev) => prev.map((h) => h.habit_id === preset.habit_id ? res.data : h));
     } catch (error) {
+      // Rollback
+      setHabits((prev) => prev.filter((h) => h.habit_id !== preset.habit_id));
       console.error('Failed to add habit:', error);
     }
   };
 
   const addCustomHabit = async () => {
-    if (!customName.trim()) return;
+    const name = customName.trim();
+    if (!name) return;
+
+    // Close dialog and clear input immediately — feels instant
+    const tempId = `tmp_${Date.now()}`;
+    setAddDialogOpen(false);
+    setCustomName('');
+    setHabits((prev) => [...prev, { habit_id: tempId, name, icon: 'check', category: 'custom' }]);
+
     try {
       const res = await axios.post(
         `${API}/habits`,
-        { name: customName, icon: 'check', category: 'custom' },
+        { name, icon: 'check', category: 'custom' },
         { withCredentials: true },
       );
-      setHabits([...habits, res.data]);
-      setCustomName('');
-      setAddDialogOpen(false);
+      // Swap temp id for the real server record
+      setHabits((prev) => prev.map((h) => h.habit_id === tempId ? res.data : h));
     } catch (error) {
+      // Rollback
+      setHabits((prev) => prev.filter((h) => h.habit_id !== tempId));
       console.error('Failed to add custom habit:', error);
     }
   };
 
   const toggleHabit = async (habitId, date) => {
+    const alreadyDone = completions.some((c) => c.habit_id === habitId && c.date === date);
+
+    // Optimistic: flip state immediately, no waiting
+    if (alreadyDone) {
+      setCompletions((prev) => prev.filter((c) => !(c.habit_id === habitId && c.date === date)));
+    } else {
+      setCompletions((prev) => [...prev, { habit_id: habitId, date }]);
+    }
+
     try {
-      const res = await axios.post(
-        `${API}/habits/${habitId}/toggle`,
-        { date },
-        { withCredentials: true },
-      );
-      if (res.data.completed) {
-        setCompletions([...completions, { habit_id: habitId, date }]);
-      } else {
-        setCompletions(
-          completions.filter(
-            (c) => !(c.habit_id === habitId && c.date === date),
-          ),
-        );
-      }
+      await axios.post(`${API}/habits/${habitId}/toggle`, { date }, { withCredentials: true });
     } catch (error) {
+      // Rollback to previous state
+      if (alreadyDone) {
+        setCompletions((prev) => [...prev, { habit_id: habitId, date }]);
+      } else {
+        setCompletions((prev) => prev.filter((c) => !(c.habit_id === habitId && c.date === date)));
+      }
       console.error('Failed to toggle habit:', error);
     }
   };
 
   const deleteHabit = async (habitId) => {
+    // Optimistic: remove immediately
+    setHabits((prev) => prev.filter((h) => h.habit_id !== habitId));
+
     try {
       await axios.delete(`${API}/habits/${habitId}`, { withCredentials: true });
-      setHabits(habits.filter((h) => h.habit_id !== habitId));
     } catch (error) {
+      // Rollback — re-fetch to restore accurate state
+      axios.get(`${API}/habits`, { withCredentials: true })
+        .then((r) => setHabits(r.data))
+        .catch(() => {});
       console.error('Failed to delete habit:', error);
     }
   };

@@ -1,0 +1,27 @@
+{
+  "name": "Anchr",
+  "short_name": "Anchr",
+  "description": "Stay grounded. Break free.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F9F8F6",
+  "theme_color": "#6B9080",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/anchr-circle-small.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/anchr-circle-small.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["health", "lifestyle"],
+  "screenshots": []
+}
