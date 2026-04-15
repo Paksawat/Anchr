@@ -123,28 +123,25 @@ export default function Dashboard() {
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const requests = [
-          axios.get(`${API}/stats`, { withCredentials: true }),
-          axios.get(`${API}/motivations`, { withCredentials: true }),
-        ];
-        if (isPaid) {
-          requests.push(
-            axios.get(`${API}/insights`, { withCredentials: true }),
-          );
-        }
-        const results = await Promise.all(requests);
-        setStats(results[0].data);
-        setMotivations(results[1].data);
-        if (results[2]) setInsights(results[2].data);
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    // Fetch stats + motivations first — these determine the main UI.
+    // Insights are fetched separately so they never block the page from rendering.
+    Promise.all([
+      axios.get(`${API}/stats`, { withCredentials: true }),
+      axios.get(`${API}/motivations`, { withCredentials: true }),
+    ])
+      .then(([sRes, mRes]) => {
+        setStats(sRes.data);
+        setMotivations(mRes.data);
+      })
+      .catch((error) => console.error('Failed to load dashboard data:', error))
+      .finally(() => setLoading(false));
+
+    if (isPaid) {
+      axios
+        .get(`${API}/insights`, { withCredentials: true })
+        .then((res) => setInsights(res.data))
+        .catch((error) => console.error('Failed to load insights:', error));
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
