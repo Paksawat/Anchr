@@ -817,6 +817,10 @@ if not _ALLOWED_ORIGINS:
         "https://anchr.site,https://your-project.vercel.app"
     )
 
+@app.get("/health")
+async def health():
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
 app.include_router(api_router)
 
 # CSRF protection — Origin/Referer header validation for state-changing methods.
