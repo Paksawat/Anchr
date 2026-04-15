@@ -90,6 +90,44 @@ function InsightCard({ insight }) {
   );
 }
 
+function computeInsights(triggersData, totalUrges) {
+  const insights = [];
+  const { hours = [], triggers = [], emotions = [], peak_hour } = triggersData || {};
+
+  // Peak hour warning — only show if current hour is within 2h of the user's peak
+  if (peak_hour !== null && peak_hour !== undefined) {
+    const currentHour = new Date().getHours();
+    if (Math.abs(currentHour - peak_hour) <= 2) {
+      insights.push({ type: 'warning', key: 'insight_high_risk_time', values: {} });
+    }
+  }
+
+  // Top trigger
+  if (triggers.length > 0) {
+    const top = triggers[0];
+    insights.push({ type: 'insight', key: 'insight_top_trigger', values: { trigger: top.name, count: top.count } });
+  }
+
+  // Evening pattern — more than 40% of urges after 8pm
+  if (totalUrges > 5) {
+    const eveningCount = hours.filter((h) => h.hour >= 20).reduce((s, h) => s + h.count, 0);
+    if (eveningCount > totalUrges * 0.4) {
+      insights.push({ type: 'suggestion', key: 'insight_evening_pattern', values: {} });
+    }
+  }
+
+  // Stress / anxiety pattern — stress trigger + anxious emotion > 30% of urges
+  if (totalUrges > 5) {
+    const stressCount = (triggers.find((t) => t.name === 'Stress')?.count || 0)
+                      + (emotions.find((e) => e.name === 'Anxious')?.count || 0);
+    if (stressCount > totalUrges * 0.3) {
+      insights.push({ type: 'suggestion', key: 'insight_stress_factor', values: {} });
+    }
+  }
+
+  return insights;
+}
+
 const PRESET_URGE_TYPES = [
   { id: 'smoking', label: 'Smoking' },
   { id: 'drinking', label: 'Drinking' },
@@ -123,25 +161,23 @@ export default function Dashboard() {
   const isPaid = user?.tier === 'paid';
 
   useEffect(() => {
-    // Fetch stats + motivations first — these determine the main UI.
-    // Insights are fetched separately so they never block the page from rendering.
-    Promise.all([
+    const requests = [
       axios.get(`${API}/stats`, { withCredentials: true }),
       axios.get(`${API}/motivations`, { withCredentials: true }),
-    ])
-      .then(([sRes, mRes]) => {
+    ];
+    if (isPaid) {
+      requests.push(axios.get(`${API}/stats/triggers`, { withCredentials: true }));
+    }
+    Promise.all(requests)
+      .then(([sRes, mRes, tRes]) => {
         setStats(sRes.data);
         setMotivations(mRes.data);
+        if (tRes) {
+          setInsights(computeInsights(tRes.data, sRes.data.total_urges));
+        }
       })
       .catch((error) => console.error('Failed to load dashboard data:', error))
       .finally(() => setLoading(false));
-
-    if (isPaid) {
-      axios
-        .get(`${API}/insights`, { withCredentials: true })
-        .then((res) => setInsights(res.data))
-        .catch((error) => console.error('Failed to load insights:', error));
-    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
