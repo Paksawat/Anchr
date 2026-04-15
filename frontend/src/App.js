@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { UrgeTimerProvider } from './contexts/UrgeTimerContext';
@@ -46,6 +47,7 @@ function App() {
           </UrgeTimerProvider>
         </AuthProvider>
       </LanguageProvider>
+      <Analytics />
     </BrowserRouter>
   );
 }
