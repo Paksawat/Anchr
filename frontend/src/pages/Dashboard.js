@@ -328,12 +328,32 @@ export default function Dashboard() {
         </div>
 
         {/* Anti-relapse insights (paid) */}
-        {isPaid && insights.length > 0 && (
-          <div className="space-y-3">
-            {insights.map((insight, i) => (
-              <InsightCard key={i} insight={insight} />
-            ))}
-          </div>
+        {isPaid && (
+          loading ? (
+            <div className="space-y-3">
+              {[72, 56, 64].map((w) => (
+                <div
+                  key={w}
+                  className="p-4 rounded-xl animate-pulse"
+                  style={{ background: '#F0EFEB', border: '1px solid #E8E6E1' }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full shrink-0" style={{ background: '#E8E6E1' }} />
+                    <div className="flex-1 space-y-2 pt-1">
+                      <div className="h-3 rounded-full" style={{ background: '#E8E6E1', width: `${w}%` }} />
+                      <div className="h-2.5 rounded-full" style={{ background: '#E8E6E1', width: `${w - 16}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : insights.length > 0 ? (
+            <div className="space-y-3">
+              {insights.map((insight, i) => (
+                <InsightCard key={i} insight={insight} />
+              ))}
+            </div>
+          ) : null
         )}
 
         <button
