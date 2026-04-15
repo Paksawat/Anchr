@@ -14,12 +14,14 @@ import Settings from './pages/Settings';
 import Programs from './pages/Programs';
 import Habits from './pages/Habits';
 import NotFound from './pages/NotFound';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import './App.css';
 
 function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<AuthPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/urge-timer" element={<ProtectedRoute><UrgeTimer /></ProtectedRoute>} />

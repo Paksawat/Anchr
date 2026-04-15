@@ -16,6 +16,11 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
+  Lock,
+  Eye,
+  EyeOff,
+  Check,
+  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -78,6 +83,15 @@ export default function Settings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Change password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [changePwLoading, setChangePwLoading] = useState(false);
+  const [changePwError, setChangePwError] = useState('');
+  const [changePwDone, setChangePwDone] = useState(false);
   // Notification permission state — re-evaluated on mount and after permission request
   const [notifPermission, setNotifPermission] = useState(
     'Notification' in window ? Notification.permission : 'unsupported',
@@ -255,6 +269,34 @@ export default function Settings() {
     } catch (error) {
       console.error('Failed to delete account:', error);
       setDeleting(false);
+    }
+  };
+
+  const isNewPasswordValid = (pw) => pw.length >= 6 && /\d/.test(pw);
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setChangePwError('');
+    if (!isNewPasswordValid(newPassword)) {
+      setChangePwError(t('password_invalid'));
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setChangePwError(t('passwords_no_match'));
+      return;
+    }
+    setChangePwLoading(true);
+    try {
+      await axios.put(`${API}/auth/change-password`, { current_password: currentPassword, new_password: newPassword }, { withCredentials: true });
+      setChangePwDone(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setTimeout(() => setChangePwDone(false), 4000);
+    } catch (err) {
+      setChangePwError(err.response?.data?.detail || 'Something went wrong');
+    } finally {
+      setChangePwLoading(false);
     }
   };
 
@@ -785,6 +827,115 @@ export default function Settings() {
             </div>
           )}
         </div>
+
+        {/* Change Password — only shown for email accounts */}
+        {user?.auth_provider === 'email' && (
+          <div className="rounded-2xl p-6 shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}>
+            <div className="flex items-center gap-3 mb-5">
+              <Lock className="w-5 h-5" style={{ color: '#6B9080' }} strokeWidth={1.5} />
+              <h2 className="font-heading text-xl font-medium" style={{ color: '#2A3A35' }}>{t('change_password')}</h2>
+            </div>
+
+            {changePwDone && (
+              <div className="mb-4 p-3 rounded-xl text-sm flex items-center gap-2" style={{ background: '#6B908015', color: '#6B9080', border: '1px solid #6B908033' }}>
+                <Check className="w-4 h-4 shrink-0" strokeWidth={2} />
+                {t('password_changed')}
+              </div>
+            )}
+            {changePwError && (
+              <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: '#FDF2F2', color: '#E5989B', border: '1px solid #E5989B33' }}>
+                {changePwError}
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              {/* Current password */}
+              <div>
+                <label className="text-sm mb-2 block" style={{ color: '#7A8B85' }}>{t('current_password')}</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#A3B1AA' }} strokeWidth={1.5} />
+                  <input
+                    type={showCurrentPw ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-10 h-12 rounded-xl text-sm outline-none"
+                    style={{ border: '1px solid #E8E6E1', background: '#FFFFFF' }}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowCurrentPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#A3B1AA' }} tabIndex={-1}>
+                    {showCurrentPw ? <EyeOff className="w-4 h-4" strokeWidth={1.5} /> : <Eye className="w-4 h-4" strokeWidth={1.5} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New password */}
+              <div>
+                <label className="text-sm mb-2 block" style={{ color: '#7A8B85' }}>{t('new_password')}</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#A3B1AA' }} strokeWidth={1.5} />
+                  <input
+                    type={showNewPw ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder={t('password_create_placeholder')}
+                    className="w-full pl-10 pr-10 h-12 rounded-xl text-sm outline-none"
+                    style={{ border: '1px solid #E8E6E1', background: '#FFFFFF' }}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowNewPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#A3B1AA' }} tabIndex={-1}>
+                    {showNewPw ? <EyeOff className="w-4 h-4" strokeWidth={1.5} /> : <Eye className="w-4 h-4" strokeWidth={1.5} />}
+                  </button>
+                </div>
+                {newPassword.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: newPassword.length >= 6 ? '#6B9080' : '#A3B1AA' }}>
+                      {newPassword.length >= 6 ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <X className="w-3 h-3" strokeWidth={2.5} />}
+                      At least 6 characters
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: /\d/.test(newPassword) ? '#6B9080' : '#A3B1AA' }}>
+                      {/\d/.test(newPassword) ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <X className="w-3 h-3" strokeWidth={2.5} />}
+                      At least 1 number
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm new password */}
+              <div>
+                <label className="text-sm mb-2 block" style={{ color: '#7A8B85' }}>{t('confirm_password')}</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#A3B1AA' }} strokeWidth={1.5} />
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder={t('confirm_password_placeholder')}
+                    className="w-full pl-10 pr-10 h-12 rounded-xl text-sm outline-none"
+                    style={{ border: `1px solid ${confirmNewPassword.length > 0 ? (newPassword === confirmNewPassword ? '#6B9080' : '#E5989B') : '#E8E6E1'}`, background: '#FFFFFF' }}
+                    required
+                  />
+                  {confirmNewPassword.length > 0 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {newPassword === confirmNewPassword
+                        ? <Check className="w-4 h-4" style={{ color: '#6B9080' }} strokeWidth={2.5} />
+                        : <X className="w-4 h-4" style={{ color: '#E5989B' }} strokeWidth={2.5} />}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={changePwLoading || !currentPassword || !isNewPasswordValid(newPassword) || newPassword !== confirmNewPassword}
+                className="rounded-full text-white font-medium h-11 px-6"
+                style={{ background: '#6B9080' }}
+              >
+                {changePwLoading ? t('saving') : t('change_password')}
+              </Button>
+            </form>
+          </div>
+        )}
 
         {/* Data & Privacy */}
         <div className="rounded-2xl p-6 shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}>

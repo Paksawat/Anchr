@@ -11,6 +11,8 @@ import logging
 import uuid
 import httpx
 import bcrypt
+import secrets
+import hashlib
 from pathlib import Path
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional
@@ -37,10 +39,11 @@ class UserRegister(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def password_min_length(cls, v: str) -> str:
-        # Enforce minimum password length server-side — never trust client validation alone
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least 1 number")
         return v
 
 class UserLogin(BaseModel):
@@ -102,6 +105,34 @@ class ProgramEnroll(BaseModel):
 class DayComplete(BaseModel):
     day: int
     reflection: Optional[str] = None
+
+def _password_rules(v: str) -> str:
+    if len(v) < 6:
+        raise ValueError("Password must be at least 6 characters")
+    if not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain at least 1 number")
+    return v
+
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+class ResetPassword(BaseModel):
+    token: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return _password_rules(v)
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return _password_rules(v)
 
 # ─── Rate Limiting ───
 # Simple in-memory sliding-window limiter.
@@ -235,6 +266,127 @@ async def logout(request: Request, response: Response):
         await db.user_sessions.delete_one({"session_token": token})
     response.delete_cookie("session_token", path="/", secure=True, samesite="none")
     return {"message": "Logged out"}
+
+async def _send_reset_email(to_email: str, reset_url: str) -> None:
+    """Send password reset email via Resend API."""
+    resend_key = os.environ.get("RESEND_API_KEY")
+    from_email = os.environ.get("RESEND_FROM_EMAIL", "noreply@anchr.site")
+    if not resend_key:
+        logging.warning("RESEND_API_KEY not set — skipping reset email")
+        return
+    html_body = f"""
+    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+      <h2 style="color: #2A3A35; font-weight: 300; margin-bottom: 8px;">Reset your password</h2>
+      <p style="color: #7A8B85; margin-bottom: 24px;">
+        You requested a password reset for your Anchr account.
+        This link expires in 15 minutes.
+      </p>
+      <a href="{reset_url}"
+         style="display: inline-block; background: #6B9080; color: #fff; text-decoration: none;
+                padding: 14px 28px; border-radius: 100px; font-size: 15px; font-weight: 500;">
+        Reset Password
+      </a>
+      <p style="color: #A3B1AA; margin-top: 24px; font-size: 13px;">
+        If you didn't request this, you can safely ignore this email.<br/>
+        The link will expire automatically.
+      </p>
+    </div>
+    """
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+            json={"from": from_email, "to": [to_email], "subject": "Reset your Anchr password", "html": html_body},
+            timeout=10,
+        )
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPassword, request: Request):
+    # Rate limit: 3 requests per IP per 15 minutes
+    client_ip = (request.headers.get("x-forwarded-for", "") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    _check_rate_limit(f"forgot:{client_ip}", limit=3, window_seconds=900)
+
+    # Always return same response — never reveal whether email exists
+    generic = {"message": "If an account with that email exists, a reset link has been sent."}
+
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if not user or not user.get("password_hash"):
+        return generic  # no account or OAuth account — silent no-op
+
+    # Invalidate any existing tokens for this user
+    await db.password_reset_tokens.delete_many({"user_id": user["user_id"]})
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+
+    await db.password_reset_tokens.insert_one({
+        "user_id": user["user_id"],
+        "token_hash": token_hash,
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    frontend_url = os.environ.get("FRONTEND_URL", "https://anchr.site")
+    reset_url = f"{frontend_url}/reset-password?token={raw_token}"
+
+    try:
+        await _send_reset_email(data.email, reset_url)
+    except Exception as e:
+        logging.error(f"Failed to send reset email: {e}")
+        # Don't surface error to user — keep response generic
+
+    await log_audit(user["user_id"], "forgot_password", request)
+    return generic
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPassword, request: Request, response: Response):
+    token_hash = hashlib.sha256(data.token.encode()).hexdigest()
+    record = await db.password_reset_tokens.find_one({"token_hash": token_hash}, {"_id": 0})
+
+    if not record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link.")
+
+    expires_at = record["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        await db.password_reset_tokens.delete_one({"token_hash": token_hash})
+        raise HTTPException(status_code=400, detail="Reset link has expired. Please request a new one.")
+
+    # Single-use: delete token immediately
+    await db.password_reset_tokens.delete_one({"token_hash": token_hash})
+
+    user_id = record["user_id"]
+    new_hash = hash_password(data.password)
+    await db.users.update_one({"user_id": user_id}, {"$set": {"password_hash": new_hash}})
+
+    # Invalidate all existing sessions for security
+    await db.user_sessions.delete_many({"user_id": user_id})
+
+    await log_audit(user_id, "reset_password", request)
+    return {"message": "Password reset successfully. Please log in with your new password."}
+
+@api_router.put("/auth/change-password")
+async def change_password(data: ChangePassword, request: Request, user: dict = Depends(get_current_user)):
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=400, detail="This account uses social login and has no password.")
+
+    if not verify_password(data.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    new_hash = hash_password(data.new_password)
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"password_hash": new_hash}})
+
+    # Invalidate all other sessions (keep current session active)
+    current_token = request.cookies.get("session_token")
+    if current_token:
+        await db.user_sessions.delete_many({"user_id": user["user_id"], "session_token": {"$ne": current_token}})
+
+    await log_audit(user["user_id"], "change_password", request)
+    return {"message": "Password changed successfully."}
 
 # ─── Profile ───
 
