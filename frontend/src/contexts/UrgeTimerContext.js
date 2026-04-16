@@ -19,6 +19,9 @@ export function UrgeTimerProvider({ children }) {
   const [currentUrgeId, setCurrentUrgeId] = useState(null);
   const [activeTab, setActiveTab] = useState('timer');
   const intervalRef = useRef(null);
+  // Guards to prevent duplicate submissions from rapid taps
+  const startingRef = useRef(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
@@ -34,6 +37,16 @@ export function UrgeTimerProvider({ children }) {
   }, [isRunning, timeLeft]);
 
   const startUrge = useCallback(async () => {
+    // Guard: ignore if already starting or not in setup phase
+    if (startingRef.current || phase !== 'setup') return;
+    startingRef.current = true;
+
+    // Transition immediately — feels instant, no waiting for the API
+    setTimeLeft(timerDuration);
+    setIsRunning(true);
+    setPhase('active');
+
+    // Create the urge record in background
     try {
       const res = await axios.post(
         `${API}/urges`,
@@ -48,13 +61,12 @@ export function UrgeTimerProvider({ children }) {
         { withCredentials: true },
       );
       setCurrentUrgeId(res.data.urge_id);
-      setTimeLeft(timerDuration);
-      setIsRunning(true);
-      setPhase('active');
     } catch (error) {
       console.error('Failed to create urge:', error);
+    } finally {
+      startingRef.current = false;
     }
-  }, [trigger, emotion, notes, intensity, urgeType, customUrgeType, timerDuration]);
+  }, [trigger, emotion, notes, intensity, urgeType, customUrgeType, timerDuration, phase]);
 
   const togglePause = useCallback(() => {
     setIsRunning((prev) => !prev);
@@ -62,46 +74,57 @@ export function UrgeTimerProvider({ children }) {
 
   const handleOutcome = useCallback(
     async (outcome, userObj) => {
-      if (currentUrgeId) {
-        try {
-          await axios.put(
-            `${API}/urges/${currentUrgeId}`,
-            {
-              outcome,
-              duration_seconds: timerDuration - timeLeft,
-              coping_used: activeTab,
-            },
-            { withCredentials: true },
-          );
-        } catch (error) {
-          console.error('Failed to update urge:', error);
-        }
-      }
-      if (outcome === 'relapsed') {
-        try {
-          await axios.post(
-            `${API}/relapses`,
-            { trigger: trigger || null, emotion: emotion || null, notes: 'Logged from urge timer' },
-            { withCredentials: true },
-          );
-        } catch (error) {
-          console.error('Failed to log relapse:', error);
-        }
-      }
+      // Guard: ignore rapid double-taps
+      if (submittingRef.current) return;
+      submittingRef.current = true;
+
+      // Snapshot values before resetting state
+      const urgeId = currentUrgeId;
+      const elapsed = timerDuration - timeLeft;
+      const tab = activeTab;
+      const trig = trigger;
+      const emo = emotion;
+
+      // Transition immediately — don't wait for API
       setPhase('setup');
       setIsRunning(false);
+      clearInterval(intervalRef.current);
       setCurrentUrgeId(null);
       setTrigger('');
       setEmotion('');
       setNotes('');
       setUrgeType(userObj?.urge_type || '');
       setCustomUrgeType(userObj?.custom_urge_type || '');
+
+      // Persist in background
+      try {
+        if (urgeId) {
+          await axios.put(
+            `${API}/urges/${urgeId}`,
+            { outcome, duration_seconds: elapsed, coping_used: tab },
+            { withCredentials: true },
+          );
+        }
+        if (outcome === 'relapsed') {
+          await axios.post(
+            `${API}/relapses`,
+            { trigger: trig || null, emotion: emo || null, notes: 'Logged from urge timer' },
+            { withCredentials: true },
+          );
+        }
+      } catch (error) {
+        console.error('Failed to save outcome:', error);
+      } finally {
+        submittingRef.current = false;
+      }
     },
     [currentUrgeId, timerDuration, timeLeft, activeTab, trigger, emotion],
   );
 
   const resetTimer = useCallback((userObj) => {
     clearInterval(intervalRef.current);
+    startingRef.current = false;
+    submittingRef.current = false;
     setPhase('setup');
     setIsRunning(false);
     setCurrentUrgeId(null);

@@ -2,8 +2,16 @@ import { useState, useEffect } from 'react';
 
 const DISMISSED_KEY = 'anchr_install_dismissed';
 
+// Capture the event at module load time — it can fire before React mounts,
+// and a useEffect listener would miss it entirely.
+let _capturedPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _capturedPrompt = e;
+});
+
 export function useInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(() => _capturedPrompt);
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(DISMISSED_KEY) === '1',
   );
@@ -21,17 +29,21 @@ export function useInstallPrompt() {
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
 
   useEffect(() => {
+    // Pick up any prompt that arrives after mount
     const handler = (e) => {
-      e.preventDefault(); // stop Chrome mini-infobar
+      e.preventDefault();
+      _capturedPrompt = e;
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Detect if user installs through the native prompt and hide the banner
   useEffect(() => {
-    const handler = () => setDeferredPrompt(null);
+    const handler = () => {
+      _capturedPrompt = null;
+      setDeferredPrompt(null);
+    };
     window.addEventListener('appinstalled', handler);
     return () => window.removeEventListener('appinstalled', handler);
   }, []);
@@ -40,7 +52,10 @@ export function useInstallPrompt() {
     if (!deferredPrompt) return false;
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setDeferredPrompt(null);
+    if (outcome === 'accepted') {
+      _capturedPrompt = null;
+      setDeferredPrompt(null);
+    }
     return outcome === 'accepted';
   };
 

@@ -321,6 +321,7 @@ function ActivePhase({
   activeTab,
   setActiveTab,
   onTogglePause,
+  onCancel,
   onOutcome,
 }) {
   return (
@@ -337,6 +338,7 @@ function ActivePhase({
         isRunning={isRunning}
         encouragement={encouragement}
         onTogglePause={onTogglePause}
+        onCancel={onCancel}
         formatTime={formatTime}
       />
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -491,6 +493,7 @@ export default function UrgeTimer() {
     activeTab, setActiveTab,
     startUrge,
     handleOutcome,
+    resetTimer,
   } = useUrgeTimer();
 
   const initialTab = location.state?.tab || 'timer';
@@ -528,6 +531,7 @@ export default function UrgeTimer() {
   }, [isRunning, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onOutcome = (outcome) => handleOutcome(outcome, user);
+  const onCancel = () => resetTimer(user);
 
   return (
     <AppLayout>
@@ -566,6 +570,7 @@ export default function UrgeTimer() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               onTogglePause={togglePause}
+              onCancel={onCancel}
               onOutcome={onOutcome}
             />
           )}

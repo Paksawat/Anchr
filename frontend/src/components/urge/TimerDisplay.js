@@ -1,9 +1,20 @@
-import React from 'react';
-import { Play, Pause } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Pause, X } from 'lucide-react';
 import { Button } from '../ui/button';
 
-export default function TimerDisplay({ timeLeft, timerDuration, isRunning, encouragement, onTogglePause, formatTime }) {
+export default function TimerDisplay({ timeLeft, timerDuration, isRunning, encouragement, onTogglePause, onCancel, formatTime }) {
   const progress = ((timerDuration - timeLeft) / timerDuration) * 100;
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  const handleCancelClick = () => {
+    if (confirmCancel) {
+      onCancel();
+    } else {
+      setConfirmCancel(true);
+      // Auto-dismiss confirm state after 3 seconds
+      setTimeout(() => setConfirmCancel(false), 3000);
+    }
+  };
 
   return (
     <div className="text-center py-8">
@@ -35,12 +46,26 @@ export default function TimerDisplay({ timeLeft, timerDuration, isRunning, encou
           data-testid="pause-timer-btn"
           onClick={onTogglePause}
           variant="outline"
-          className="rounded-full px-6"
+          className="rounded-full px-6 active:scale-95 transition-transform"
           style={{ border: '1px solid #E8E6E1' }}
         >
-          {isRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-          {isRunning ? 'Pause' : 'Resume'}
+          {isRunning
+            ? <><Pause className="w-4 h-4 mr-2" strokeWidth={2} /> Pause</>
+            : <><Play className="w-4 h-4 mr-2" strokeWidth={2} /> Resume</>}
         </Button>
+
+        <button
+          onClick={handleCancelClick}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95"
+          style={{
+            background: confirmCancel ? '#FDF2F2' : '#F0EFEB',
+            color: confirmCancel ? '#E5989B' : '#A3B1AA',
+            border: `1px solid ${confirmCancel ? '#E5989B55' : '#E8E6E1'}`,
+          }}
+        >
+          <X className="w-4 h-4" strokeWidth={2} />
+          {confirmCancel ? 'Tap again to cancel' : 'Stop'}
+        </button>
       </div>
     </div>
   );
