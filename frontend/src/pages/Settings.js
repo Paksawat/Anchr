@@ -21,6 +21,7 @@ import {
   EyeOff,
   Check,
   X,
+  Smartphone,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -33,6 +34,7 @@ import {
   DialogTrigger,
 } from '../components/ui/dialog';
 import { scheduleReminderNotifications } from '../hooks/useNotifications';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import {
   Select,
   SelectContent,
@@ -57,6 +59,7 @@ export default function Settings() {
   const { user, setUser } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const navigate = useNavigate();
+  const { showBanner, isIOS, isAndroid, install, dismiss: dismissInstall } = useInstallPrompt();
   const [reminders, setReminders] = useState({
     enabled: true,
     times: ['09:00', '21:00'],
@@ -108,6 +111,8 @@ export default function Settings() {
         setReminders(remRes.data);
         setUrgeTypes(utRes.data);
         setBuddies(bRes.data);
+        // Re-schedule on every page open — keeps SW timers fresh
+        scheduleReminderNotifications(remRes.data);
       })
       .catch((error) => {
         console.error('Failed to load settings:', error);
@@ -317,6 +322,50 @@ export default function Settings() {
             {t('settings_subtitle')}
           </p>
         </div>
+
+        {/* Install banner — only shown when app is not already installed */}
+        {showBanner && (
+          <div
+            className="rounded-2xl p-5 flex items-center gap-4"
+            style={{ background: '#2A3A35', border: '1px solid #2A3A3533' }}
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: '#6B9080' }}
+            >
+              <Smartphone className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
+                Install Anchr
+              </p>
+              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#A4C3B2' }}>
+                {isIOS
+                  ? 'Tap Share → "Add to Home Screen" in Safari for reliable notifications'
+                  : 'Install to your home screen for reliable notifications'}
+              </p>
+            </div>
+            {isAndroid && (
+              <button
+                onClick={async () => { const ok = await install(); if (ok) dismissInstall(); }}
+                className="shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-opacity active:opacity-75"
+                style={{ background: '#6B9080', color: '#FFFFFF' }}
+              >
+                Install
+              </button>
+            )}
+            {isIOS && (
+              <button
+                onClick={dismissInstall}
+                className="shrink-0 p-1.5 rounded-lg transition-opacity active:opacity-75"
+                style={{ color: '#A4C3B2' }}
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4" strokeWidth={2} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Disclaimer */}
         <div className="rounded-2xl p-5 flex items-start gap-3" style={{ background: '#FDF2F2', border: '1px solid #E5989B33' }}>
@@ -773,6 +822,19 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
+              {/* Platform install note */}
+              <div
+                className="flex items-start gap-2.5 p-3 rounded-xl"
+                style={{ background: '#F9F8F6', border: '1px solid #E8E6E1' }}
+              >
+                <Smartphone className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#A3B1AA' }} strokeWidth={1.5} />
+                <p className="text-xs leading-relaxed" style={{ color: '#7A8B85' }}>
+                  {isIOS
+                    ? 'For reliable reminders on iPhone, add Anchr to your Home Screen via Safari (Share → Add to Home Screen).'
+                    : 'For reliable reminders on Android, install Anchr to your home screen so notifications work when the browser is closed.'}
+                </p>
+              </div>
+
               {/* Notification permission */}
               {notifPermission !== 'unsupported' && (
                 <div

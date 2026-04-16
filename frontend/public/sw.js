@@ -58,6 +58,49 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// ─── Reminder scheduling ─────────────────────────────────────────────────────
+// The page sends SCHEDULE_REMINDERS via postMessage. The SW uses its own
+// setTimeout which survives the page being backgrounded — far more reliable
+// than scheduling in the page itself.
+
+const _reminderTimers = [];
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'SCHEDULE_REMINDERS') return;
+
+  // Clear any previously scheduled reminders
+  _reminderTimers.forEach((id) => clearTimeout(id));
+  _reminderTimers.length = 0;
+
+  const { times = [], days = [] } = event.data;
+  const now = new Date();
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const todayName = dayNames[now.getDay()];
+
+  // Only schedule if today is an active day
+  if (days.length > 0 && !days.includes(todayName)) return;
+
+  for (const timeStr of times) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    const delay = target - now;
+    if (delay <= 0) continue;
+
+    const id = setTimeout(() => {
+      self.registration.showNotification('Anchr — time to check in', {
+        body: 'Take a moment to reflect on your day. Stay grounded.',
+        icon: '/anchr-circle-small.svg',
+        badge: '/anchr-circle-small.svg',
+        tag: `anchr-reminder-${timeStr}`,
+        renotify: true,
+        data: { url: '/dashboard' },
+      });
+    }, delay);
+    _reminderTimers.push(id);
+  }
+});
+
 // ─── Push: show notification ─────────────────────────────────────────────────
 // Triggered by Web Push from backend (when VAPID is configured)
 self.addEventListener('push', (event) => {
