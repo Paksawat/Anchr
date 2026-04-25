@@ -1,12 +1,12 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from urllib.parse import urlparse
-from collections import defaultdict, deque
 import os
-import time
 import logging
 import uuid
 import httpx
@@ -29,6 +29,26 @@ db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+# ─── Rate Limiting ───
+
+def _get_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def _get_session_key(request: Request) -> str:
+    """Rate-limit authenticated routes by session token (unique per user session, no DB lookup)."""
+    token = request.cookies.get("session_token")
+    return token if token else _get_ip(request)
+
+async def _on_rate_limit(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse({"detail": "Too many requests. Please try again later."}, status_code=429)
+
+limiter = Limiter(key_func=_get_ip)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _on_rate_limit)
 
 # ─── Models ───
 
@@ -134,23 +154,6 @@ class ChangePassword(BaseModel):
     def password_strength(cls, v: str) -> str:
         return _password_rules(v)
 
-# ─── Rate Limiting ───
-# Simple in-memory sliding-window limiter.
-# Works for single-instance Render deployments.
-# For multi-instance: replace with Redis-backed slowapi.
-
-_rl_store: dict = defaultdict(deque)
-
-def _check_rate_limit(key: str, limit: int, window_seconds: int) -> None:
-    """Raise 429 if `key` exceeds `limit` calls within `window_seconds`."""
-    now = time.monotonic()
-    bucket = _rl_store[key]
-    while bucket and bucket[0] < now - window_seconds:
-        bucket.popleft()
-    if len(bucket) >= limit:
-        raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
-    bucket.append(now)
-
 # ─── Auth Helpers ───
 
 def _extract_token(request: Request) -> str:
@@ -213,10 +216,8 @@ def set_session_cookie(response: Response, token: str):
 # ─── Auth Routes ───
 
 @api_router.post("/auth/register")
-async def register(data: UserRegister, request: Request, response: Response):
-    # Rate limit: 5 registrations per IP per minute
-    client_ip = (request.headers.get("x-forwarded-for", "") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
-    _check_rate_limit(f"register:{client_ip}", limit=5, window_seconds=60)
+@limiter.limit("3/hour")
+async def register(request: Request, data: UserRegister, response: Response):
 
     existing = await db.users.find_one({"email": data.email}, {"_id": 0})
     if existing:
@@ -232,10 +233,8 @@ async def register(data: UserRegister, request: Request, response: Response):
     return {"user_id": user_id, "email": data.email, "name": data.name, "picture": None, "created_at": now, "urge_type": None, "custom_urge_type": None, "tier": "free", "disclaimer_accepted": False}
 
 @api_router.post("/auth/login")
-async def login(data: UserLogin, request: Request, response: Response):
-    # Rate limit: 10 login attempts per IP per minute
-    client_ip = (request.headers.get("x-forwarded-for", "") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
-    _check_rate_limit(f"login:{client_ip}", limit=10, window_seconds=60)
+@limiter.limit("5/10 minutes")
+async def login(request: Request, data: UserLogin, response: Response):
 
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user:
@@ -301,10 +300,8 @@ async def _send_reset_email(to_email: str, reset_url: str) -> None:
         )
 
 @api_router.post("/auth/forgot-password")
-async def forgot_password(data: ForgotPassword, request: Request):
-    # Rate limit: 3 requests per IP per 15 minutes
-    client_ip = (request.headers.get("x-forwarded-for", "") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
-    _check_rate_limit(f"forgot:{client_ip}", limit=3, window_seconds=900)
+@limiter.limit("3/hour")
+async def forgot_password(request: Request, data: ForgotPassword):
 
     # Always return same response — never reveal whether email exists
     generic = {"message": "If an account with that email exists, a reset link has been sent."}
@@ -340,7 +337,8 @@ async def forgot_password(data: ForgotPassword, request: Request):
     return generic
 
 @api_router.post("/auth/reset-password")
-async def reset_password(data: ResetPassword, request: Request, response: Response):
+@limiter.limit("5/hour")
+async def reset_password(request: Request, data: ResetPassword, response: Response):
     token_hash = hashlib.sha256(data.token.encode()).hexdigest()
     record = await db.password_reset_tokens.find_one({"token_hash": token_hash}, {"_id": 0})
 
@@ -413,7 +411,8 @@ async def get_urge_types():
 # ─── Urge Routes ───
 
 @api_router.post("/urges")
-async def create_urge(data: UrgeCreate, user: dict = Depends(get_current_user)):
+@limiter.limit("30/minute", key_func=_get_session_key)
+async def create_urge(request: Request, data: UrgeCreate, user: dict = Depends(get_current_user)):
     urge_id = f"urge_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     # Default urge_type to user's profile urge_type if not provided
@@ -699,6 +698,7 @@ async def alert_buddy(buddy_id: str, user: dict = Depends(get_current_user)):
 # ─── Data & Privacy Routes ───
 
 @api_router.get("/export")
+@limiter.limit("3/day", key_func=_get_session_key)
 async def export_data(request: Request, user: dict = Depends(get_current_user)):
     uid = user["user_id"]
     urges = await db.urges.find({"user_id": uid}, {"_id": 0}).to_list(None)
