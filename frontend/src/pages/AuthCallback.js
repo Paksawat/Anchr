@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import axios from 'axios';
 
-const API = `${process.env.REACT_APP_API_URL}/api`;
+const API = `${import.meta.env.VITE_API_URL}/api`;
 
 export default function AuthCallback() {
   const hasProcessed = useRef(false);

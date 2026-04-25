@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, Check, X } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_API_URL}/api`;
+const API = `${import.meta.env.VITE_API_URL}/api`;
 
 function PasswordInput({ value, onChange, placeholder, label, showStrength = false }) {
   const [show, setShow] = useState(false);
