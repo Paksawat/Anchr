@@ -28,7 +28,7 @@ import {
   DialogTrigger,
 } from '../components/ui/dialog';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 
 const ICON_MAP = {
   droplets: Droplets,

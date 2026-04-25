@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 
 const UrgeTimerContext = createContext(null);
 

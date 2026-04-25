@@ -19,7 +19,7 @@ import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { motion } from 'framer-motion';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 
 const ICONS = { zap: Zap, flame: Flame, target: Target, moon: Moon };
 

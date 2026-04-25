@@ -27,7 +27,7 @@ import BreathingExercise from '../components/urge/BreathingExercise';
 import GroundingExercise from '../components/urge/GroundingExercise';
 import CopingTools from '../components/urge/CopingTools';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 
 const TIMER_OPTIONS = [
   { label: '5 min', seconds: 300 },

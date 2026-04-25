@@ -21,7 +21,7 @@ import {
 } from '../components/ui/dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 const CATEGORIES = [
   'general',
   'why_i_quit',

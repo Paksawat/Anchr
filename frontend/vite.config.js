@@ -1,10 +1,8 @@
-import { defineConfig, loadEnv, transformWithEsbuild } from 'vite';
+import { defineConfig, transformWithEsbuild } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'url';
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-
   return {
     plugins: [
       // Treat .js files that contain JSX as jsx so Vite/Rollup can parse them
@@ -39,6 +37,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       open: true,
+      proxy: {
+        '/api': {
+          target: 'https://anchr-production-9514.up.railway.app',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });

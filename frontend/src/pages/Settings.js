@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from '../components/ui/select';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 const DAYS_KEYS = [
   'Monday',
   'Tuesday',

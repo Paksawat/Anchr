@@ -6,7 +6,7 @@ import axios from 'axios';
 import { ChevronRight, AlertCircle, Flame, TrendingUp, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 
 const STEPS = ['welcome', 'how', 'disclaimer', 'urge'];
 

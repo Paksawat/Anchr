@@ -38,7 +38,7 @@ import {
 const TRIGGER_KEYS = ['stress', 'boredom', 'loneliness', 'location', 'social', 'tiredness', 'habit_loop', 'other'];
 const EMOTION_KEYS = ['anxious', 'sad', 'angry', 'frustrated', 'lonely', 'restless', 'numb', 'overwhelmed'];
 
-const API = `${import.meta.env.VITE_API_URL}/api`;
+const API = `/api`;
 
 function StatsCards({ t, stats }) {
   const items = [
